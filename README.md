@@ -134,11 +134,7 @@ Planned PCB features:
 * **PC Software:** SteamVR, OpenVR, Relativty driver
 * **Display:** 2K 120Hz target panel with HDMI/DP-to-MIPI driver board
 
-## Why jjkVR
 
-Most DIY VR headset builds rely on off-the-shelf microcontroller boards and simple IMU wiring. jjkVR modernizes that approach with a custom embedded tracking board, stronger MCU, 9-DoF sensor fusion, USB HID pose streaming, and a cleaner split between firmware, PCB hardware, display bring-up, and PC driver integration.
-
-The goal is not just to assemble a headset, but to build and validate the embedded systems stack behind it.
 
 ## References
 
