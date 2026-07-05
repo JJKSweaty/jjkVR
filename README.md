@@ -62,6 +62,10 @@ The PCB itself is designed in KiCad and includes USB-C with proper CC resistors,
 - **PC software:** SteamVR, OpenVR, Relativty driver architecture
 - **Display:** 2K 120Hz panel with HDMI/DP-to-MIPI conversion
 
+## Development rules
+
+See `AGENTS.md` for repo-local agent instructions. In short: keep firmware minimal, comment hardware-critical assumptions, and update the relevant README whenever wiring, build, test, or hardware assumptions change.
+
 ## Acknowledgments
 
 - [Relativty](https://github.com/relativty/Relativty) — open-source VR headset and OpenVR driver reference
