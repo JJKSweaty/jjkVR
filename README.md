@@ -1,6 +1,6 @@
 # jjkVR
 
-A custom, open-source, wired PC VR headset — built from a bare IMU chip up through SteamVR integration.
+A custom, wired PC VR headset — built from a bare IMU chip up through SteamVR integration.
 
 `Status: In progress (hardware, firmware, and driver bring-up)`
 
@@ -69,6 +69,3 @@ The PCB itself is designed in KiCad and includes USB-C with proper CC resistors,
 - [FastIMU](https://github.com/LiquidCGS/FastIMU) — IMU sensor fusion library
 - SteamVR / OpenVR — driver architecture jjkVR integrates with
 
-## License
-
-Not yet specified.
