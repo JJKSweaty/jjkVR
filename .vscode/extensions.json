@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "stmicroelectronics.stm32-vscode-extension",
+    "eclipse-cdt.serial-monitor",
+    "ms-vscode.cmake-tools"
+  ]
+}

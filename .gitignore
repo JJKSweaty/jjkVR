@@ -1,0 +1,4 @@
+debug.log
+**/build/
+**/.cache/
+**/compile_commands.json
