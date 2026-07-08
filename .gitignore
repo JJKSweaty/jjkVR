@@ -1,4 +1,7 @@
+AGENTS.md
 debug.log
 **/build/
 **/.cache/
 **/compile_commands.json
+**/.vscode/settings.json
+**/.vscode/c_cpp_properties.json
