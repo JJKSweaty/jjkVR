@@ -1,9 +1,0 @@
-{
-  "device": "STM32F411CEU7",
-  "core": "Cortex-M4",
-  "order": 0,
-  "toolchain": "GCC",
-  "source": {
-    "sourceType": "Empty"
-  }
-}

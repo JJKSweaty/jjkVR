@@ -8,3 +8,4 @@ These rules are project memory for future agent turns in this repo.
 - Do not comment obvious C syntax or simple assignments. Comments should explain why the code is safe or intentionally simple, not restate what it does.
 - Keep `README.md` and the relevant subproject README updated when pins, wiring, build steps, serial output, test flow, dependencies, or hardware assumptions change.
 - For firmware bring-up, prefer one small runnable hardware check before adding the next feature.
+- In CubeMX STM32 firmware folders, keep CubeMX-generated peripheral setup authoritative. Add only the minimum user-code logic needed for the test or feature, with readable formatting and comments only where they prevent embedded mistakes.
