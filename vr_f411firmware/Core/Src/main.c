@@ -32,8 +32,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define ICM20948_WHO_AM_I       0x00U
-#define ICM20948_REG_BANK_SEL   0x7FU
+#define ICM20948_WHO_AM_I        0x00U
+#define ICM20948_REG_BANK_SEL    0x7FU
 #define ICM20948_EXPECTED_ID     0xEAU
 #define ICM20948_ADDR_LOW        (0x68U << 1)
 #define ICM20948_ADDR_HIGH       (0x69U << 1)
@@ -269,8 +269,8 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : BTN_CAL_Pin */
   GPIO_InitStruct.Pin = BTN_CAL_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(BTN_CAL_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LED_R_Pin LED_G_Pin */
