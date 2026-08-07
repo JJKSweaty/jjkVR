@@ -1,18 +1,19 @@
 # vr_f411firmware
 
-STM32F411CEU6 CubeMX/CMake firmware for a small ICM20948 bring-up test.
+STM32F411CEU6 CubeMX/CMake firmware for a TF-Luna I2C bring-up test.
 
 ## Wiring
 
 | Signal | STM32 pin | Notes |
 |---|---:|---|
-| ICM20948 SCL | PB6 | I2C1 SCL from CubeMX, use 3.3 V pull-up if the breakout has none |
-| ICM20948 SDA | PB7 | I2C1 SDA from CubeMX, use 3.3 V pull-up if the breakout has none |
-| ICM20948 VCC | 3V3 | Do not power a 3.3 V-only IMU from 5 V |
-| ICM20948 GND | GND | Shared ground |
-| LED_R | PA0 | Fast blink means IMU read failed or WHO_AM_I was not 0xEA |
-| LED_G | PA1 | Slow blink means WHO_AM_I matched 0xEA |
-| LED_B | PB0 | Off in this test |
+| TF-Luna pin 1 (+5V) | 5V | Sensor supply must be 3.7-5.2 V; do not use the 3.3 V rail |
+| TF-Luna pin 2 (SDA) | PB7 | I2C1 SDA with pull-up to 3.3 V |
+| TF-Luna pin 3 (SCL) | PB6 | I2C1 SCL with pull-up to 3.3 V |
+| TF-Luna pin 4 (GND) | GND | Shared ground |
+| TF-Luna pin 5 (mode) | GND | Required to select I2C mode at power-up |
+| LED_R | PA0 | I2C read failed |
+| LED_G | PA1 | Valid 20-800 cm reading with adequate signal |
+| LED_B | PB0 | Sensor started, but reading is currently unreliable |
 
 ## VS Code Build
 
@@ -23,8 +24,19 @@ STM32F411CEU6 CubeMX/CMake firmware for a small ICM20948 bring-up test.
 
 Expected artifacts are under `build/Debug/`, including `vr_f411firmware.elf`.
 
+## USB serial output
+
+After flashing, set BOOT0 low and reconnect USB. Open the STM32 virtual COM port at 115200 baud in a serial terminal. The firmware sends `distance_cm,amplitude` every 100 ms:
+
+```text
+142,896
+143,901
+```
+
+An `error,i2c` line means the TF-Luna did not answer.
+
 ## Hardware Test
 
 Flash the ELF with ST-LINK or STM32CubeProgrammer, then reset the board.
 
-Expected result: green LED blinks briefly once per second. Fast red blink means the IMU did not answer at I2C address `0x68` or `0x69`, or the returned `WHO_AM_I` value was not `0xEA`.
+Point the TF-Luna at an opaque target at least 20 cm away. Green means a valid reading, blue means the sensor answered but the distance or signal is unreliable, and red means the sensor did not answer at I2C address `0x10`.

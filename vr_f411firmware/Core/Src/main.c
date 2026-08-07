@@ -22,6 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+#include "usbd_cdc_if.h"
 
 /* USER CODE END Includes */
 
@@ -32,11 +34,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define ICM20948_WHO_AM_I        0x00U
-#define ICM20948_REG_BANK_SEL    0x7FU
-#define ICM20948_EXPECTED_ID     0xEAU
-#define ICM20948_ADDR_LOW        (0x68U << 1)
-#define ICM20948_ADDR_HIGH       (0x69U << 1)
+#define TFLUNA_I2C_ADDRESS   (0x10U << 1)
+#define TFLUNA_DISTANCE_REG  0x00U
 
 /* USER CODE END PD */
 
@@ -57,37 +56,13 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
-static uint8_t imu_read_whoami(uint16_t address);
 static void leds_off(void);
-static void blink_imu_status(uint8_t imu_ok);
+static void show_lidar_status(GPIO_TypeDef *port, uint16_t pin);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static uint8_t imu_read_whoami(uint16_t address)
-{
-  uint8_t bank = 0;
-  uint8_t whoami = 0;
-
-  /* ICM20948 WHO_AM_I is in register bank 0; keep the test explicit for bring-up. */
-  if (HAL_I2C_Mem_Write(&hi2c1, address, ICM20948_REG_BANK_SEL,
-                        I2C_MEMADD_SIZE_8BIT, &bank, 1, 100) != HAL_OK)
-  {
-    return 0;
-  }
-
-  HAL_Delay(2);
-
-  if (HAL_I2C_Mem_Read(&hi2c1, address, ICM20948_WHO_AM_I,
-                       I2C_MEMADD_SIZE_8BIT, &whoami, 1, 100) != HAL_OK)
-  {
-    return 0;
-  }
-
-  return whoami;
-}
-
 static void leds_off(void)
 {
   HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
@@ -95,18 +70,10 @@ static void leds_off(void)
   HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
 }
 
-static void blink_imu_status(uint8_t imu_ok)
+static void show_lidar_status(GPIO_TypeDef *port, uint16_t pin)
 {
-  GPIO_TypeDef *port = imu_ok ? LED_G_GPIO_Port : LED_R_GPIO_Port;
-  uint16_t pin = imu_ok ? LED_G_Pin : LED_R_Pin;
-  uint32_t on_ms = imu_ok ? 50U : 100U;
-  uint32_t off_ms = imu_ok ? 950U : 100U;
-
   leds_off();
   HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);
-  HAL_Delay(on_ms);
-  HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);
-  HAL_Delay(off_ms);
 }
 
 /* USER CODE END 0 */
@@ -143,12 +110,7 @@ int main(void)
   MX_I2C1_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-  uint8_t whoami = imu_read_whoami(ICM20948_ADDR_LOW);
-  if (whoami != ICM20948_EXPECTED_ID)
-  {
-    whoami = imu_read_whoami(ICM20948_ADDR_HIGH);
-  }
-  uint8_t imu_ok = (whoami == ICM20948_EXPECTED_ID);
+  show_lidar_status(LED_B_GPIO_Port, LED_B_Pin);
 
   /* USER CODE END 2 */
 
@@ -159,7 +121,42 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    blink_imu_status(imu_ok);
+    uint8_t data[4];
+
+    /* ponytail: polling is enough for bring-up; wire TF-Luna pin 6 for synchronized reads later. */
+    if (HAL_I2C_Mem_Read(&hi2c1, TFLUNA_I2C_ADDRESS, TFLUNA_DISTANCE_REG,
+                         I2C_MEMADD_SIZE_8BIT, data, sizeof(data), 100U) != HAL_OK)
+    {
+      static const uint8_t error[] = "error,i2c\r\n";
+
+      show_lidar_status(LED_R_GPIO_Port, LED_R_Pin);
+      CDC_Transmit_FS((uint8_t *)error, sizeof(error) - 1U);
+    }
+    else
+    {
+      uint16_t distance_cm = (uint16_t)data[0] | ((uint16_t)data[1] << 8);
+      uint16_t amplitude = (uint16_t)data[2] | ((uint16_t)data[3] << 8);
+      char line[32];
+      int line_length = snprintf(line, sizeof(line), "%u,%u\r\n",
+                                 (unsigned int)distance_cm, (unsigned int)amplitude);
+
+      if ((distance_cm >= 20U) && (distance_cm <= 800U) &&
+          (amplitude >= 100U) && (amplitude != 0xFFFFU))
+      {
+        show_lidar_status(LED_G_GPIO_Port, LED_G_Pin);
+      }
+      else
+      {
+        show_lidar_status(LED_B_GPIO_Port, LED_B_Pin);
+      }
+
+      if (line_length > 0)
+      {
+        CDC_Transmit_FS((uint8_t *)line, (uint16_t)line_length);
+      }
+    }
+
+    HAL_Delay(100U);
   }
   /* USER CODE END 3 */
 }
