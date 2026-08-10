@@ -17,8 +17,8 @@
 
 #include "driverlog.h"
 
-#include "Relativty_ServerDriver.hpp"
-#include "Relativty_HMDDriver.hpp"
+#include "JJKVR_ServerDriver.hpp"
+#include "JJKVR_HMDDriver.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -45,9 +45,9 @@ namespace {
 	}
 }
 
-class Relativty::MouseController : public RelativtyDevice<false> {
+class JJKVR::MouseController : public JJKVRDevice<false> {
 public:
-	MouseController(HMDDriver* hmd) : RelativtyDevice("mouse", "jjkvr_"), hmd(hmd) {
+	MouseController(HMDDriver* hmd) : JJKVRDevice("mouse", "jjkvr_"), hmd(hmd) {
 		static const char* const mouseSection = "jjkvr_mouse";
 		m_sRenderModelPath = "generic_controller";
 		m_sBindPath = "{jjkvr}/input/jjkvr_mouse_profile.json";
@@ -62,7 +62,7 @@ public:
 	}
 
 	vr::EVRInitError Activate(uint32_t unObjectId) override {
-		const auto error = RelativtyDevice::Activate(unObjectId);
+		const auto error = JJKVRDevice::Activate(unObjectId);
 		if (error != vr::VRInitError_None) {
 			return error;
 		}
@@ -139,7 +139,7 @@ private:
 	vr::VRInputComponentHandle_t system = vr::k_ulInvalidInputComponentHandle;
 };
 
-vr::EVRInitError Relativty::ServerDriver::Init(vr::IVRDriverContext* DriverContext) {
+vr::EVRInitError JJKVR::ServerDriver::Init(vr::IVRDriverContext* DriverContext) {
 
 	vr::EVRInitError eError = vr::InitServerDriverContext(DriverContext);
 		if (eError != vr::VRInitError_None) {
@@ -147,7 +147,7 @@ vr::EVRInitError Relativty::ServerDriver::Init(vr::IVRDriverContext* DriverConte
 	}
 	#ifdef DRIVERLOG_H
 	InitDriverLog(vr::VRDriverLog());
-	DriverLog("JJKVR driver version 0.1.0 (based on Relativty 0.1.1)");
+	DriverLog("JJKVR driver version 0.1.0");
 	DriverLog("Thread1: hid quaternion packet listener loop");
 	DriverLog("Thread2: update driver pose loop");
 	DriverLog("Thread3: receive positional data from python loop");
@@ -155,18 +155,18 @@ vr::EVRInitError Relativty::ServerDriver::Init(vr::IVRDriverContext* DriverConte
 
 	this->Log("JJKVR Init successful.\n");
 	
-	this->HMDDriver = new Relativty::HMDDriver("zero");
+	this->HMDDriver = new JJKVR::HMDDriver("zero");
 	vr::VRServerDriverHost()->TrackedDeviceAdded(HMDDriver->GetSerialNumber().c_str(), vr::ETrackedDeviceClass::TrackedDeviceClass_HMD, this->HMDDriver);
 	// GetSerialNumber() is there for a reason!
 
-	this->mouseController = new Relativty::MouseController(this->HMDDriver);
+	this->mouseController = new JJKVR::MouseController(this->HMDDriver);
 	vr::VRServerDriverHost()->TrackedDeviceAdded(mouseController->GetSerialNumber().c_str(),
 		vr::ETrackedDeviceClass::TrackedDeviceClass_Controller, this->mouseController);
 
 	return vr::VRInitError_None;
 }
 
-void Relativty::ServerDriver::Cleanup() {
+void JJKVR::ServerDriver::Cleanup() {
 	delete this->mouseController;
 	this->mouseController = nullptr;
 
@@ -180,11 +180,11 @@ void Relativty::ServerDriver::Cleanup() {
 	VR_CLEANUP_SERVER_DRIVER_CONTEXT();
 }
 
-const char* const* Relativty::ServerDriver::GetInterfaceVersions() {
+const char* const* JJKVR::ServerDriver::GetInterfaceVersions() {
 	return vr::k_InterfaceVersions;
 }
 
-void Relativty::ServerDriver::RunFrame() {
+void JJKVR::ServerDriver::RunFrame() {
 	if (this->HMDDriver != nullptr) {
 		this->HMDDriver->frameUpdate();
 	}
@@ -193,18 +193,18 @@ void Relativty::ServerDriver::RunFrame() {
 	}
 }
 
-bool Relativty::ServerDriver::ShouldBlockStandbyMode() {
+bool JJKVR::ServerDriver::ShouldBlockStandbyMode() {
 	return false;
 }
 
-void Relativty::ServerDriver::EnterStandby() {
+void JJKVR::ServerDriver::EnterStandby() {
 
 }
 
-void Relativty::ServerDriver::LeaveStandby() {
+void JJKVR::ServerDriver::LeaveStandby() {
 
 }
 
-void Relativty::ServerDriver::Log(std::string log) {
+void JJKVR::ServerDriver::Log(std::string log) {
 	vr::VRDriverLog()->Log(log.c_str());
 }

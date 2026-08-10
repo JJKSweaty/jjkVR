@@ -1,9 +1,9 @@
 #pragma once
 
-#ifndef RELATIVTY_COMPONENTS_H
-#define RELATIVTY_COMPONENTS_H
+#ifndef JJKVR_COMPONENTS_H
+#define JJKVR_COMPONENTS_H
 
-namespace Relativty {
+namespace JJKVR {
   static const char *const k_pch_ExtDisplay_Section = "jjkvr_extendedDisplay";
   static const char *const k_pch_ExtDisplay_WindowX_Int32 = "windowX";
   static const char *const k_pch_ExtDisplay_WindowY_Int32 = "windowY";
@@ -22,10 +22,10 @@ namespace Relativty {
   static const char *const k_pch_ExtDisplay_IsDisplayOnDesktop_bool = "IsDisplayOnDesktop";
 
 
-  static const bool g_bRelativtyExtDisplayComp_doLensStuff = true;
-  class RelativtyExtendedDisplayComponent: public vr::IVRDisplayComponent {
+  static const bool g_bJJKVRExtDisplayComp_doLensStuff = true;
+  class JJKVRExtendedDisplayComponent: public vr::IVRDisplayComponent {
   public:
-    RelativtyExtendedDisplayComponent(){
+    JJKVRExtendedDisplayComponent(){
 
       m_nWindowX = vr::VRSettings()->GetInt32(k_pch_ExtDisplay_Section,
                                               k_pch_ExtDisplay_WindowX_Int32);
@@ -128,7 +128,7 @@ namespace Relativty {
                                                       float fV) {
       vr::DistortionCoordinates_t coordinates;
 
-      if constexpr(g_bRelativtyExtDisplayComp_doLensStuff) {
+      if constexpr(g_bJJKVRExtDisplayComp_doLensStuff) {
         // Distortion for lens implementation from
         // https://github.com/HelenXR/openvr_survivor/blob/master/src/head_mount_display_device.cc
         float hX;
@@ -187,4 +187,4 @@ namespace Relativty {
 
 }
 
-#endif // RELATIVTY_COMPONENTS_H
+#endif // JJKVR_COMPONENTS_H

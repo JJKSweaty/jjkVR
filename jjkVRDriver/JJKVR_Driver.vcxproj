@@ -175,14 +175,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\DriverFactory.cpp" />
-    <ClCompile Include="source\Relativty_EmbeddedPython.cpp" />
-    <ClCompile Include="source\Relativty_HMDDriver.cpp" />
-    <ClCompile Include="source\Relativty_ServerDriver.cpp" />
+    <ClCompile Include="source\JJKVR_EmbeddedPython.cpp" />
+    <ClCompile Include="source\JJKVR_HMDDriver.cpp" />
+    <ClCompile Include="source\JJKVR_ServerDriver.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\Relativty_EmbeddedPython.h" />
-    <ClInclude Include="include\Relativty_HMDDriver.hpp" />
-    <ClInclude Include="include\Relativty_ServerDriver.hpp" />
+    <ClInclude Include="include\JJKVR_EmbeddedPython.h" />
+    <ClInclude Include="include\JJKVR_HMDDriver.hpp" />
+    <ClInclude Include="include\JJKVR_ServerDriver.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

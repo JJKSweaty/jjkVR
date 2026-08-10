@@ -22,8 +22,8 @@
 #include <filesystem>
 #include <string>
 #include "Python.h"
-#include "Relativty_EmbeddedPython.h"
-#include "Relativty_ServerDriver.hpp"
+#include "JJKVR_EmbeddedPython.h"
+#include "JJKVR_ServerDriver.hpp"
 
 namespace fs = std::filesystem;
 
@@ -36,7 +36,7 @@ void startPythonTrackingClient_threaded(std::string PyPath) {
 	PyPath = "PyPATH = " + singleQuote + PyPath + singleQuote;
 	Py_Initialize();
 	PyRun_SimpleString(PyPath.c_str());
-	Relativty::ServerDriver::Log("Thread4: starting Client.py \n");
+	JJKVR::ServerDriver::Log("Thread4: starting Client.py \n");
 	PyRun_AnyFileExFlags(fp, "Client.py", 0, NULL);
 	Py_Finalize();
 }

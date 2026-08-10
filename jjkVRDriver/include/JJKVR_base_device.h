@@ -6,9 +6,9 @@
 #include "driverlog.h"
 
 
-#include "Relativty_components.h"
+#include "JJKVR_components.h"
 
-namespace Relativty {
+namespace JJKVR {
   inline vr::HmdQuaternion_t HmdQuaternion_Init(double w, double x, double y,
                                             double z) {
     vr::HmdQuaternion_t quat;
@@ -31,9 +31,9 @@ namespace Relativty {
 
   // should be publicly inherited
   template<bool UseHaptics>
-  class RelativtyDevice: public vr::ITrackedDeviceServerDriver {
+  class JJKVRDevice: public vr::ITrackedDeviceServerDriver {
   public:
-    RelativtyDevice(std::string myserial, std::string deviceBreed): m_sSerialNumber(myserial) {
+    JJKVRDevice(std::string myserial, std::string deviceBreed): m_sSerialNumber(myserial) {
       // boilerplate
 
       m_unObjectId = vr::k_unTrackedDeviceIndexInvalid;
@@ -64,7 +64,7 @@ namespace Relativty {
       m_Pose.willDriftInYaw = true;
     }
 
-    ~RelativtyDevice(){
+    ~JJKVRDevice(){
       DriverLog("device with serial %s yeeted out of existence\n", m_sSerialNumber.c_str());
 
     }
@@ -181,7 +181,7 @@ namespace Relativty {
 
     vr::DriverPose_t m_Pose; // device's pose, use this at runtime
 
-    std::shared_ptr<RelativtyExtendedDisplayComponent> m_spExtDisplayComp;
+    std::shared_ptr<JJKVRExtendedDisplayComponent> m_spExtDisplayComp;
 
   private:
     // openvr api stuff that i don't trust you with

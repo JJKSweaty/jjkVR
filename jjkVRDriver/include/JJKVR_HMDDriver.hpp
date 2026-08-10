@@ -19,11 +19,11 @@
 #include <WinSock2.h>
 #include "hidapi/hidapi.h"
 #include "openvr_driver.h"
-#include "Relativty_components.h"
-#include "Relativty_base_device.h"
+#include "JJKVR_components.h"
+#include "JJKVR_base_device.h"
 
-namespace Relativty {
-	class HMDDriver : public RelativtyDevice<false>
+namespace JJKVR {
+	class HMDDriver : public JJKVRDevice<false>
 	{
 	public:
 		HMDDriver(std::string myserial);
@@ -32,7 +32,7 @@ namespace Relativty {
 		void frameUpdate();
 		inline void setProperties();
 
-		// Inherited from RelativtyDevice, to be overridden
+		// Inherited from JJKVRDevice, to be overridden
 		virtual vr::EVRInitError Activate(uint32_t unObjectId);
 		virtual void Deactivate();
 

@@ -25,11 +25,11 @@
 
 #include "driverlog.h"
 
-#include "Relativty_HMDDriver.hpp"
-#include "Relativty_ServerDriver.hpp"
-#include "Relativty_EmbeddedPython.h"
-#include "Relativty_components.h"
-#include "Relativty_base_device.h"
+#include "JJKVR_HMDDriver.hpp"
+#include "JJKVR_ServerDriver.hpp"
+#include "JJKVR_EmbeddedPython.h"
+#include "JJKVR_components.h"
+#include "JJKVR_base_device.h"
 
 
 #include <string>
@@ -49,8 +49,8 @@ inline void Normalize(float norma[3], float v[3], float max[3], float min[3], fl
 	}
 }
 
-vr::EVRInitError Relativty::HMDDriver::Activate(uint32_t unObjectId) {
-	RelativtyDevice::Activate(unObjectId);
+vr::EVRInitError JJKVR::HMDDriver::Activate(uint32_t unObjectId) {
+	JJKVRDevice::Activate(unObjectId);
 	this->setProperties();
 
 	const auto clickInputError = vr::VRDriverInput()->CreateBooleanComponent(
@@ -58,13 +58,13 @@ vr::EVRInitError Relativty::HMDDriver::Activate(uint32_t unObjectId) {
 	const auto systemInputError = vr::VRDriverInput()->CreateBooleanComponent(
 		m_ulPropertyContainer, "/input/system", &m_compSystem);
 	if (clickInputError != vr::VRInputError_None || systemInputError != vr::VRInputError_None) {
-		Relativty::ServerDriver::Log("Input: unable to create mouse button components.\n");
+		JJKVR::ServerDriver::Log("Input: unable to create mouse button components.\n");
 	}
 
 	int result;
 	result = hid_init(); //Result should be 0.
 	if (result) {
-		Relativty::ServerDriver::Log("USB: HID API initialization failed. \n");
+		JJKVR::ServerDriver::Log("USB: HID API initialization failed. \n");
 		return vr::VRInitError_Driver_TrackedDeviceInterfaceUnknown;
 	}
 
@@ -73,29 +73,29 @@ vr::EVRInitError Relativty::HMDDriver::Activate(uint32_t unObjectId) {
 		#ifdef DRIVERLOG_H
 		DriverLog("USB: Unable to open HMD device with pid=%d and vid=%d.\n", m_iPid, m_iVid);
 		#else
-		Relativty::ServerDriver::Log("USB: Unable to open HMD device with pid="+ std::to_string(m_iPid) +" and vid="+ std::to_string(m_iVid) +".\n");
+		JJKVR::ServerDriver::Log("USB: Unable to open HMD device with pid="+ std::to_string(m_iPid) +" and vid="+ std::to_string(m_iVid) +".\n");
 		#endif
 		return vr::VRInitError_Init_InterfaceNotFound;
 	}
 
 	this->retrieve_quaternion_isOn = true;
-	this->retrieve_quaternion_thread_worker = std::thread(&Relativty::HMDDriver::retrieve_device_quaternion_packet_threaded, this);
+	this->retrieve_quaternion_thread_worker = std::thread(&JJKVR::HMDDriver::retrieve_device_quaternion_packet_threaded, this);
 
 	if (this->start_tracking_server) {
 		this->retrieve_vector_isOn = true;
-		this->retrieve_vector_thread_worker = std::thread(&Relativty::HMDDriver::retrieve_client_vector_packet_threaded, this);
+		this->retrieve_vector_thread_worker = std::thread(&JJKVR::HMDDriver::retrieve_client_vector_packet_threaded, this);
 		while (this->serverNotReady) {
 			// do nothing
 		}
 		this->startPythonTrackingClient_worker = std::thread(startPythonTrackingClient_threaded, this->PyPath);
 	}
 
-	this->update_pose_thread_worker = std::thread(&Relativty::HMDDriver::update_pose_threaded, this);
+	this->update_pose_thread_worker = std::thread(&JJKVR::HMDDriver::update_pose_threaded, this);
 
 	return vr::VRInitError_None;
 }
 
-void Relativty::HMDDriver::frameUpdate() {
+void JJKVR::HMDDriver::frameUpdate() {
 	if (m_compClick != vr::k_ulInvalidInputComponentHandle) {
 		vr::VRDriverInput()->UpdateBooleanComponent(
 			m_compClick, (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0, 0.0);
@@ -106,7 +106,7 @@ void Relativty::HMDDriver::frameUpdate() {
 	}
 }
 
-void Relativty::HMDDriver::Deactivate() {
+void JJKVR::HMDDriver::Deactivate() {
 	this->retrieve_quaternion_isOn = false;
 	this->retrieve_quaternion_thread_worker.join();
 	hid_close(this->handle);
@@ -118,14 +118,14 @@ void Relativty::HMDDriver::Deactivate() {
 		this->retrieve_vector_thread_worker.join();
 		WSACleanup();
 	}
-	RelativtyDevice::Deactivate();
+	JJKVRDevice::Deactivate();
 	this->update_pose_thread_worker.join();
 
-	Relativty::ServerDriver::Log("Thread0: all threads exit correctly \n");
+	JJKVR::ServerDriver::Log("Thread0: all threads exit correctly \n");
 }
 
-void Relativty::HMDDriver::update_pose_threaded() {
-	Relativty::ServerDriver::Log("Thread2: successfully started\n");
+void JJKVR::HMDDriver::update_pose_threaded() {
+	JJKVR::ServerDriver::Log("Thread2: successfully started\n");
 	while (m_unObjectId != vr::k_unTrackedDeviceIndexInvalid) {
 		if (this->new_quaternion_avaiable && this->new_vector_avaiable) {
 			m_Pose.qRotation.w = this->quat[0];
@@ -161,10 +161,10 @@ void Relativty::HMDDriver::update_pose_threaded() {
 
 		}
 	}
-	Relativty::ServerDriver::Log("Thread2: successfully stopped\n");
+	JJKVR::ServerDriver::Log("Thread2: successfully stopped\n");
 }
 
-void Relativty::HMDDriver::calibrate_quaternion() {
+void JJKVR::HMDDriver::calibrate_quaternion() {
 	if ((0x01 & GetAsyncKeyState(0x52)) != 0) {
 		qconj[0].store(quat[0]);
 		qconj[1].store(-1 * quat[1]);
@@ -184,7 +184,7 @@ void Relativty::HMDDriver::calibrate_quaternion() {
 	this->quat[3] = qres[3];
 }
 
-void Relativty::HMDDriver::retrieve_device_quaternion_packet_threaded() {
+void JJKVR::HMDDriver::retrieve_device_quaternion_packet_threaded() {
 	uint8_t packet_buffer[64];
 	int16_t quaternion_packet[4];
 	//this struct is for mpu9250 support
@@ -196,7 +196,7 @@ void Relativty::HMDDriver::retrieve_device_quaternion_packet_threaded() {
 	};
 	#pragma pack(pop)
 	int result;
-	Relativty::ServerDriver::Log("Thread1: successfully started\n");
+	JJKVR::ServerDriver::Log("Thread1: successfully started\n");
 	while (this->retrieve_quaternion_isOn) {
 		result = hid_read(this->handle, packet_buffer, 64); //Result should be greater than 0.
 		if (result > 0) {
@@ -246,13 +246,13 @@ void Relativty::HMDDriver::retrieve_device_quaternion_packet_threaded() {
 
 		}
 		else {
-			Relativty::ServerDriver::Log("Thread1: Issue while trying to read USB\n");
+			JJKVR::ServerDriver::Log("Thread1: Issue while trying to read USB\n");
 		}
 	}
-	Relativty::ServerDriver::Log("Thread1: successfully stopped\n");
+	JJKVR::ServerDriver::Log("Thread1: successfully stopped\n");
 }
 
-void Relativty::HMDDriver::retrieve_client_vector_packet_threaded() {
+void JJKVR::HMDDriver::retrieve_client_vector_packet_threaded() {
 	WSADATA wsaData;
 	struct sockaddr_in server, client;
 	int addressLen;
@@ -268,37 +268,37 @@ void Relativty::HMDDriver::retrieve_client_vector_packet_threaded() {
 	float coordinate[3]{ 0, 0, 0 };
 	float coordinate_normalized[3];
 
-	Relativty::ServerDriver::Log("Thread3: Initialising Socket.\n");
+	JJKVR::ServerDriver::Log("Thread3: Initialising Socket.\n");
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-		Relativty::ServerDriver::Log("Thread3: Failed. Error Code: " + WSAGetLastError());
+		JJKVR::ServerDriver::Log("Thread3: Failed. Error Code: " + WSAGetLastError());
 		return;
 	}
-	Relativty::ServerDriver::Log("Thread3: Socket successfully initialised.\n");
+	JJKVR::ServerDriver::Log("Thread3: Socket successfully initialised.\n");
 
 	if ((this->sock = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
-		Relativty::ServerDriver::Log("Thread3: could not create socket: " + WSAGetLastError());
-	Relativty::ServerDriver::Log("Thread3: Socket created.\n");
+		JJKVR::ServerDriver::Log("Thread3: could not create socket: " + WSAGetLastError());
+	JJKVR::ServerDriver::Log("Thread3: Socket created.\n");
 
 	server.sin_family = AF_INET;
 	server.sin_port = htons(50000);
 	server.sin_addr.s_addr = INADDR_ANY;
 
 	if (bind(this->sock, (struct sockaddr*) & server, sizeof(server)) == SOCKET_ERROR)
-		Relativty::ServerDriver::Log("Thread3: Bind failed with error code: " + WSAGetLastError());
-	Relativty::ServerDriver::Log("Thread3: Bind done \n");
+		JJKVR::ServerDriver::Log("Thread3: Bind failed with error code: " + WSAGetLastError());
+	JJKVR::ServerDriver::Log("Thread3: Bind done \n");
 
 	listen(this->sock, 1);
 
 	this->serverNotReady = false;
 
-	Relativty::ServerDriver::Log("Thread3: Waiting for incoming connections...\n");
+	JJKVR::ServerDriver::Log("Thread3: Waiting for incoming connections...\n");
 	addressLen = sizeof(struct sockaddr_in);
 	this->sock_receive = accept(this->sock, (struct sockaddr*) & client, &addressLen);
 	if (this->sock_receive == INVALID_SOCKET)
-		Relativty::ServerDriver::Log("Thread3: accept failed with error code: " + WSAGetLastError());
-	Relativty::ServerDriver::Log("Thread3: Connection accepted");
+		JJKVR::ServerDriver::Log("Thread3: accept failed with error code: " + WSAGetLastError());
+	JJKVR::ServerDriver::Log("Thread3: Connection accepted");
 
-	Relativty::ServerDriver::Log("Thread3: successfully started\n");
+	JJKVR::ServerDriver::Log("Thread3: successfully started\n");
 	while (this->retrieve_vector_isOn) {
 		resultReceiveLen = recv(this->sock_receive, receiveBuffer, receiveBufferLen, NULL);
 		if (resultReceiveLen > 0) {
@@ -314,55 +314,55 @@ void Relativty::HMDDriver::retrieve_client_vector_packet_threaded() {
 			this->new_vector_avaiable = true;
 		}
 	}
-	Relativty::ServerDriver::Log("Thread3: successfully stopped\n");
+	JJKVR::ServerDriver::Log("Thread3: successfully stopped\n");
 }
 
-Relativty::HMDDriver::HMDDriver(std::string myserial):RelativtyDevice(myserial, "jjkvr_") {
+JJKVR::HMDDriver::HMDDriver(std::string myserial):JJKVRDevice(myserial, "jjkvr_") {
 	// keys for use with the settings API
-	static const char* const Relativty_hmd_section = "jjkvr_hmd";
+	static const char* const jjkvr_hmd_section = "jjkvr_hmd";
 
 	// openvr api stuff
 	m_sRenderModelPath = "{jjkvr}/rendermodels/generic_hmd";
 	m_sBindPath = "{jjkvr}/input/jjkvr_hmd_profile.json";
 
-	m_spExtDisplayComp = std::make_shared<Relativty::RelativtyExtendedDisplayComponent>();
+	m_spExtDisplayComp = std::make_shared<JJKVR::JJKVRExtendedDisplayComponent>();
 
 	// not openvr api stuff
-	Relativty::ServerDriver::Log("Loading Settings\n");
-	this->IPD = vr::VRSettings()->GetFloat(Relativty_hmd_section, "IPDmeters");
-	this->SecondsFromVsyncToPhotons = vr::VRSettings()->GetFloat(Relativty_hmd_section, "secondsFromVsyncToPhotons");
-	this->DisplayFrequency = vr::VRSettings()->GetFloat(Relativty_hmd_section, "displayFrequency");
+	JJKVR::ServerDriver::Log("Loading Settings\n");
+	this->IPD = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "IPDmeters");
+	this->SecondsFromVsyncToPhotons = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "secondsFromVsyncToPhotons");
+	this->DisplayFrequency = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "displayFrequency");
 
-	this->start_tracking_server = vr::VRSettings()->GetBool(Relativty_hmd_section, "startTrackingServer");
-	this->upperBound = vr::VRSettings()->GetFloat(Relativty_hmd_section, "upperBound");
-	this->lowerBound = vr::VRSettings()->GetFloat(Relativty_hmd_section, "lowerBound");
-	this->normalizeMinX = vr::VRSettings()->GetFloat(Relativty_hmd_section, "normalizeMinX");
-	this->normalizeMinY = vr::VRSettings()->GetFloat(Relativty_hmd_section, "normalizeMinY");
-	this->normalizeMinZ = vr::VRSettings()->GetFloat(Relativty_hmd_section, "normalizeMinZ");
-	this->normalizeMaxX = vr::VRSettings()->GetFloat(Relativty_hmd_section, "normalizeMaxX");
-	this->normalizeMaxY = vr::VRSettings()->GetFloat(Relativty_hmd_section, "normalizeMaxY");
-	this->normalizeMaxZ = vr::VRSettings()->GetFloat(Relativty_hmd_section, "normalizeMaxZ");
-	this->scalesCoordinateMeterX = vr::VRSettings()->GetFloat(Relativty_hmd_section, "scalesCoordinateMeterX");
-	this->scalesCoordinateMeterY = vr::VRSettings()->GetFloat(Relativty_hmd_section, "scalesCoordinateMeterY");
-	this->scalesCoordinateMeterZ = vr::VRSettings()->GetFloat(Relativty_hmd_section, "scalesCoordinateMeterZ");
-	this->offsetCoordinateX = vr::VRSettings()->GetFloat(Relativty_hmd_section, "offsetCoordinateX");
-	this->offsetCoordinateY = vr::VRSettings()->GetFloat(Relativty_hmd_section, "offsetCoordinateY");
-	this->offsetCoordinateZ = vr::VRSettings()->GetFloat(Relativty_hmd_section, "offsetCoordinateZ");
+	this->start_tracking_server = vr::VRSettings()->GetBool(jjkvr_hmd_section, "startTrackingServer");
+	this->upperBound = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "upperBound");
+	this->lowerBound = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "lowerBound");
+	this->normalizeMinX = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "normalizeMinX");
+	this->normalizeMinY = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "normalizeMinY");
+	this->normalizeMinZ = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "normalizeMinZ");
+	this->normalizeMaxX = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "normalizeMaxX");
+	this->normalizeMaxY = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "normalizeMaxY");
+	this->normalizeMaxZ = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "normalizeMaxZ");
+	this->scalesCoordinateMeterX = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "scalesCoordinateMeterX");
+	this->scalesCoordinateMeterY = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "scalesCoordinateMeterY");
+	this->scalesCoordinateMeterZ = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "scalesCoordinateMeterZ");
+	this->offsetCoordinateX = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "offsetCoordinateX");
+	this->offsetCoordinateY = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "offsetCoordinateY");
+	this->offsetCoordinateZ = vr::VRSettings()->GetFloat(jjkvr_hmd_section, "offsetCoordinateZ");
 
-	this->m_iPid = vr::VRSettings()->GetInt32(Relativty_hmd_section, "hmdPid");
-	this->m_iVid = vr::VRSettings()->GetInt32(Relativty_hmd_section, "hmdVid");
+	this->m_iPid = vr::VRSettings()->GetInt32(jjkvr_hmd_section, "hmdPid");
+	this->m_iVid = vr::VRSettings()->GetInt32(jjkvr_hmd_section, "hmdVid");
 
-	this->m_bIMUpktIsDMP = vr::VRSettings()->GetBool(Relativty_hmd_section, "hmdIMUdmpPackets");
+	this->m_bIMUpktIsDMP = vr::VRSettings()->GetBool(jjkvr_hmd_section, "hmdIMUdmpPackets");
 
 	char buffer[1024];
-	vr::VRSettings()->GetString(Relativty_hmd_section, "PyPath", buffer, sizeof(buffer));
+	vr::VRSettings()->GetString(jjkvr_hmd_section, "PyPath", buffer, sizeof(buffer));
 	this->PyPath = buffer;
 
 	// this is a bad idea, this should be set by the tracking loop
 	m_Pose.result = vr::TrackingResult_Running_OK;
 }
 
-inline void Relativty::HMDDriver::setProperties() {
+inline void JJKVR::HMDDriver::setProperties() {
 	vr::VRProperties()->SetFloatProperty(m_ulPropertyContainer, vr::Prop_UserIpdMeters_Float, this->IPD);
 	vr::VRProperties()->SetFloatProperty(m_ulPropertyContainer, vr::Prop_UserHeadToEyeDepthMeters_Float, 0.16f);
 	vr::VRProperties()->SetFloatProperty(m_ulPropertyContainer, vr::Prop_DisplayFrequency_Float, this->DisplayFrequency);

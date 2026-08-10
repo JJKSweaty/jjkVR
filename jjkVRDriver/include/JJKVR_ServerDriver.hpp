@@ -14,13 +14,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #pragma once
-#ifndef RELATIVTY_SERVERDRIVER_H
-#define RELATIVTY_SERVERDRIVER_H
+#ifndef JJKVR_SERVERDRIVER_H
+#define JJKVR_SERVERDRIVER_H
 
 #include "openvr_driver.h"
-#include "Relativty_HMDDriver.hpp"
+#include "JJKVR_HMDDriver.hpp"
 
-namespace Relativty {
+namespace JJKVR {
 	class MouseController;
 
 	class ServerDriver : public vr::IServerTrackedDeviceProvider
@@ -41,4 +41,4 @@ namespace Relativty {
 	};
 }
 
-#endif // RELATIVTY_SERVERDRIVER_H
+#endif // JJKVR_SERVERDRIVER_H

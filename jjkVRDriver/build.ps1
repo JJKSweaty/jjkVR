@@ -14,7 +14,7 @@ $msbuild = Join-Path $installPath "MSBuild\Current\Bin\MSBuild.exe"
 if (-not (Test-Path -LiteralPath $msbuild)) {
     throw "Visual Studio C++ Build Tools with the v142 toolset are required."
 }
-& $msbuild (Join-Path $PSScriptRoot "Relativty_Driver.sln") /m /p:Configuration=Release /p:Platform=x64
+& $msbuild (Join-Path $PSScriptRoot "JJKVR_Driver.sln") /m /p:Configuration=Release /p:Platform=x64
 if ($LASTEXITCODE -ne 0) {
     throw "JJKVR driver build failed with exit code $LASTEXITCODE."
 }

@@ -14,17 +14,17 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "openvr_driver.h"
-#include "Relativty_ServerDriver.hpp"
+#include "JJKVR_ServerDriver.hpp"
 
 
-static std::shared_ptr<Relativty::ServerDriver> Relativty_Driver;
+static std::shared_ptr<JJKVR::ServerDriver> JJKVR_Driver;
 
 extern "C" __declspec(dllexport) void* HmdDriverFactory(const char* InterfaceName, int* ReturnCode) {
 	if (std::strcmp(InterfaceName, vr::IServerTrackedDeviceProvider_Version) == 0) {
-		if (!Relativty_Driver) {
-			Relativty_Driver = std::make_shared<Relativty::ServerDriver>();
+		if (!JJKVR_Driver) {
+			JJKVR_Driver = std::make_shared<JJKVR::ServerDriver>();
 		}
-		return Relativty_Driver.get();
+		return JJKVR_Driver.get();
 	}
 	if (ReturnCode)
 		*ReturnCode = vr::VRInitError_Init_InterfaceNotFound;

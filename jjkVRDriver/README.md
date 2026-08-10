@@ -2,8 +2,8 @@
 
 This is a small, product-focused fork of the Relativty SteamVR driver. The
 original display, distortion, HID, socket, and optional embedded-Python paths
-are retained. JJKVR changes the runtime identity and adds one isolated virtual
-mouse controller; the Relativty HMD implementation remains the product core.
+are retained as the backbone. The driver, HMD implementation, runtime identity,
+and virtual mouse controller are JJKVR-owned.
 
 Build the x64 Release driver with Visual Studio C++ Build Tools and the v142
 toolset:
