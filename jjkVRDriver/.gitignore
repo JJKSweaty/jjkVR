@@ -1,0 +1,9 @@
+/.vs/
+/*Win32/
+/*x64/
+/DriverLog/Debug*/
+/DriverLog/Release*/
+/libraries/*/driverlog.*
+/libraries/*/hidapi.*
+/jjkvr/bin/*/driver_jjkvr.*
+*.VC.db

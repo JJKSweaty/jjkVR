@@ -7,7 +7,7 @@ A working plan for building a custom-PCB version of the Relativty open-source VR
 ## 1. System Architecture (what you're actually building)
 
 ```
-[IMU] --I2C--> [Custom MCU Board] --USB HID--> [PC: SteamVR + Relativty Driver]
+[IMU] --I2C--> [Custom MCU Board] --USB HID--> [PC: SteamVR + JJKVR Driver]
                                                         |
 [Display Driver Board] <--HDMI/DP-- [PC GPU] -----------
                 |
@@ -74,6 +74,10 @@ This replaces the "Relativty Motherboard" / off-the-shelf Arduino Pro Micro appr
 
 ## 4. Firmware Requirements
 
+Implementation status and bring-up steps live in the short
+[firmware build plan](firmware_build_plan.md). The current temporary test maps
+TF-Luna range to HID yaw so the sensor-to-SteamVR path can be proven without the IMU.
+
 - Read IMU over I2C at a consistent rate — for the **ICM20948 (chosen IMU)**, the FastIMU library's calibrated sketch is the reference implementation, and it's the same one the stock Relativty build guide already uses.
 - Run sensor fusion **in firmware** via FastIMU (Mahony/Madgwick) to turn the ICM20948's raw accel/gyro/magnetometer readings into quaternion or Euler orientation data — unlike the BNO085, the ICM20948 has no onboard fusion silicon, so this step happens on your MCU. This is the main place STM32F411's hardware FPU earns its keep over the ATmega32U4 fallback (§3): faster, more numerically stable fusion math at the same or higher output rate.
 - Package orientation data into a USB HID report the SteamVR driver expects (match the existing Relativty driver's HID report format so the PC-side driver doesn't need rewriting — or update both in lockstep if you change the protocol).
@@ -86,7 +90,11 @@ This replaces the "Relativty Motherboard" / off-the-shelf Arduino Pro Micro appr
 
 ## 5. Software Requirements (PC side)
 
-- **SteamVR + the Relativty OpenVR driver**, updated to:
+- **SteamVR + the JJKVR OpenVR driver**, kept as a small fork of Relativty so
+  the existing HMD/display architecture remains intact. Build, installation,
+  mouse controls, and validation live in the short
+  [driver build plan](steamvr_driver_build_plan.md).
+- The driver is configured to:
   - match whatever `hmdPid`/`hmdVid` your custom board reports (get these via Arduino IDE's "Get Board Info" or your MCU's USB descriptor if hand-written).
   - correctly parse the custom PCB's HID report if you changed its format from stock.
 - **`default.vrsettings` config** for display geometry (`windowX/Y`, `windowWidth/Height`, `renderWidth/Height`), IPD, and distortion coefficients (`DistortionK1/K2`) — this is per-user/per-display and needs a sane default plus documentation for tuning it.

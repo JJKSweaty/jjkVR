@@ -22,8 +22,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include "usbd_cdc_if.h"
+#include <math.h>
+#include <string.h>
+#include "usbd_hid.h"
 
 /* USER CODE END Includes */
 
@@ -36,6 +37,14 @@
 /* USER CODE BEGIN PD */
 #define TFLUNA_I2C_ADDRESS   (0x10U << 1)
 #define TFLUNA_DISTANCE_REG  0x00U
+#define LIDAR_HID_TEST       1
+#define LIDAR_TEST_MIN_CM    20.0f
+#define LIDAR_TEST_MAX_CM    200.0f
+
+/* Fail loudly if CubeMX regenerates its 4-byte mouse report over this protocol. */
+_Static_assert(HID_EPIN_SIZE == 64U, "Relativty HID endpoint must be 64 bytes");
+_Static_assert(HID_MOUSE_REPORT_DESC_SIZE == 23U, "Relativty HID descriptor was overwritten");
+_Static_assert(sizeof(float) == 4U, "Relativty HID protocol requires 32-bit float");
 
 /* USER CODE END PD */
 
@@ -58,6 +67,9 @@ static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 static void leds_off(void);
 static void show_lidar_status(GPIO_TypeDef *port, uint16_t pin);
+#if LIDAR_HID_TEST
+static void send_lidar_test_pose(uint16_t distance_cm);
+#endif
 
 /* USER CODE END PFP */
 
@@ -75,6 +87,21 @@ static void show_lidar_status(GPIO_TypeDef *port, uint16_t pin)
   leds_off();
   HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);
 }
+
+#if LIDAR_HID_TEST
+static void send_lidar_test_pose(uint16_t distance_cm)
+{
+  uint8_t report[64] = {1U};
+  float distance = fminf(fmaxf((float)distance_cm, LIDAR_TEST_MIN_CM), LIDAR_TEST_MAX_CM);
+  float yaw = ((distance - LIDAR_TEST_MIN_CM) /
+               (LIDAR_TEST_MAX_CM - LIDAR_TEST_MIN_CM) - 0.5f) * 3.14159265f;
+  float quaternion[4] = {cosf(yaw * 0.5f), 0.0f, sinf(yaw * 0.5f), 0.0f};
+
+  /* Relativty report ID 1 stores little-endian float quaternion w,x,y,z. */
+  memcpy(&report[1], quaternion, sizeof(quaternion));
+  USBD_HID_SendReport(&hUsbDeviceFS, report, sizeof(report));
+}
+#endif
 
 /* USER CODE END 0 */
 
@@ -127,32 +154,23 @@ int main(void)
     if (HAL_I2C_Mem_Read(&hi2c1, TFLUNA_I2C_ADDRESS, TFLUNA_DISTANCE_REG,
                          I2C_MEMADD_SIZE_8BIT, data, sizeof(data), 100U) != HAL_OK)
     {
-      static const uint8_t error[] = "error,i2c\r\n";
-
       show_lidar_status(LED_R_GPIO_Port, LED_R_Pin);
-      CDC_Transmit_FS((uint8_t *)error, sizeof(error) - 1U);
     }
     else
     {
       uint16_t distance_cm = (uint16_t)data[0] | ((uint16_t)data[1] << 8);
       uint16_t amplitude = (uint16_t)data[2] | ((uint16_t)data[3] << 8);
-      char line[32];
-      int line_length = snprintf(line, sizeof(line), "%u,%u\r\n",
-                                 (unsigned int)distance_cm, (unsigned int)amplitude);
-
       if ((distance_cm >= 20U) && (distance_cm <= 800U) &&
           (amplitude >= 100U) && (amplitude != 0xFFFFU))
       {
         show_lidar_status(LED_G_GPIO_Port, LED_G_Pin);
+#if LIDAR_HID_TEST
+        send_lidar_test_pose(distance_cm);
+#endif
       }
       else
       {
         show_lidar_status(LED_B_GPIO_Port, LED_B_Pin);
-      }
-
-      if (line_length > 0)
-      {
-        CDC_Transmit_FS((uint8_t *)line, (uint16_t)line_length);
       }
     }
 
