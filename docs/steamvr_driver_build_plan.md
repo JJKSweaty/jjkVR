@@ -36,16 +36,19 @@ click confirmation are the remaining interactive checks.
 - Runtime name and resources use `jjkvr`; the DLL is `driver_jjkvr.dll`.
 - A separate `jjkvr.mouse` tracked device supplies SteamVR's native visible
   laser cursor without changing the HMD pose.
-- Mouse position on the 1920x1080 main monitor aims the cursor; left-click is
-  VR select, right-click is VR right-click, and middle-click toggles dashboard.
+- Mouse position inside the 2880x1440 headset display aims the cursor;
+  left-click is VR select, right-click is VR right-click, and middle-click
+  toggles dashboard. On the main monitor, the VR pose is invalid and its
+  buttons are released.
 - `R` retains Relativty's orientation recenter behavior.
 - Relativty's 3-element position normalization loop no longer writes a fourth
   element, and float normalization limits no longer truncate to integers.
 
 The desktop **Display VR View** remains a mirror. The Windows arrow is not drawn
 inside the headset; the visible VR cursor is SteamVR's laser/reticle from
-`jjkvr.mouse`. The `jjkvr_mouse` settings provide monitor origin/size and
-horizontal/vertical pointer-range tuning without modifying code.
+`jjkvr.mouse`. The `jjkvr_mouse` settings provide horizontal/vertical
+pointer-range tuning without modifying code. Mouse ownership uses the
+`jjkvr_extendedDisplay` window rectangle directly.
 
 ## Build
 
@@ -80,9 +83,12 @@ until JJKVR passes.
 2. Start SteamVR and confirm the active HMD serial begins with `jjkvr.`.
 3. Confirm the compositor reaches `Startup Complete` without error 302.
 4. Vary TF-Luna distance and confirm the view rotates.
-5. Middle-click to open the dashboard, move the mouse on the main monitor to
-   aim the visible VR cursor, and left-click a dashboard item.
-6. Right-click a target that supports a secondary click.
-7. Press `R` and confirm the current orientation becomes the forward reference.
+5. On the main monitor, press left, right, and middle mouse over a harmless
+   desktop area; confirm no VR laser, click, or dashboard action appears.
+6. Move the cursor right onto the headset display, middle-click to open the
+   dashboard, aim the visible VR cursor, and left-click a dashboard item.
+7. Right-click a target that supports a secondary click.
+8. Move the cursor back to the main monitor and confirm the VR laser disappears.
+9. Press `R` and confirm the current orientation becomes the forward reference.
 
 Do not start Driver4VR or the old Relativty Python tracker for this test.

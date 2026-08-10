@@ -56,10 +56,11 @@ edges aligned. If the left monitor is the Windows primary display, use
    200 cm. With a green LED, the rendered view should rotate smoothly.
 
 **Display VR View** is a non-interactive mirror and does not show the Windows
-mouse cursor. JJKVR adds a separate virtual mouse controller: move the mouse on
-the 1920x1080 main monitor to aim SteamVR's visible laser cursor, left-click to
-select, right-click for a VR secondary click, and middle-click to toggle the
-dashboard. This is isolated from the firmware pose path.
+mouse cursor. JJKVR adds a separate virtual mouse controller: move the cursor
+onto the headset display to enable and aim SteamVR's visible laser cursor,
+left-click to select, right-click for a VR secondary click, and middle-click to
+toggle the dashboard. Moving back to the main monitor releases the VR buttons
+and hides the laser. This is isolated from the firmware pose path.
 
 ## Next firmware stages
 

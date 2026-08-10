@@ -20,8 +20,8 @@
 #include "JJKVR_ServerDriver.hpp"
 #include "JJKVR_HMDDriver.hpp"
 
-#include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <Windows.h>
 
 namespace {
@@ -43,6 +43,19 @@ namespace {
 		const vr::HmdQuaternion_t pitch = { std::cos(halfPitch), std::sin(halfPitch), 0.0, 0.0 };
 		return multiplyQuaternion(yaw, pitch);
 	}
+
+	constexpr bool cursorIsInsideScreen(long x, long y, int32_t screenX, int32_t screenY,
+										 int32_t screenWidth, int32_t screenHeight) {
+		// Right and bottom are exclusive, matching Windows monitor rectangles.
+		return static_cast<int64_t>(x) >= screenX &&
+			static_cast<int64_t>(x) < static_cast<int64_t>(screenX) + screenWidth &&
+			static_cast<int64_t>(y) >= screenY &&
+			static_cast<int64_t>(y) < static_cast<int64_t>(screenY) + screenHeight;
+	}
+
+	static_assert(cursorIsInsideScreen(1920, 0, 1920, 0, 2880, 1440));
+	static_assert(!cursorIsInsideScreen(1919, 0, 1920, 0, 2880, 1440));
+	static_assert(!cursorIsInsideScreen(4800, 0, 1920, 0, 2880, 1440));
 }
 
 class JJKVR::MouseController : public JJKVRDevice<false> {
@@ -51,10 +64,14 @@ public:
 		static const char* const mouseSection = "jjkvr_mouse";
 		m_sRenderModelPath = "generic_controller";
 		m_sBindPath = "{jjkvr}/input/jjkvr_mouse_profile.json";
-		screenX = vr::VRSettings()->GetInt32(mouseSection, "screenX");
-		screenY = vr::VRSettings()->GetInt32(mouseSection, "screenY");
-		screenWidth = vr::VRSettings()->GetInt32(mouseSection, "screenWidth");
-		screenHeight = vr::VRSettings()->GetInt32(mouseSection, "screenHeight");
+		screenX = vr::VRSettings()->GetInt32(
+			k_pch_ExtDisplay_Section, k_pch_ExtDisplay_WindowX_Int32);
+		screenY = vr::VRSettings()->GetInt32(
+			k_pch_ExtDisplay_Section, k_pch_ExtDisplay_WindowY_Int32);
+		screenWidth = vr::VRSettings()->GetInt32(
+			k_pch_ExtDisplay_Section, k_pch_ExtDisplay_WindowWidth_Int32);
+		screenHeight = vr::VRSettings()->GetInt32(
+			k_pch_ExtDisplay_Section, k_pch_ExtDisplay_WindowHeight_Int32);
 		if (screenWidth < 2) screenWidth = 2;
 		if (screenHeight < 2) screenHeight = 2;
 		horizontalDegrees = vr::VRSettings()->GetFloat(mouseSection, "horizontalDegrees");
@@ -95,34 +112,37 @@ public:
 
 	void frameUpdate() {
 		const vr::DriverPose_t hmdPose = hmd->GetPose();
-		POINT cursor = { screenX + screenWidth / 2, screenY + screenHeight / 2 };
-		GetCursorPos(&cursor);
-
-		const double normalizedX = std::clamp(
-			static_cast<double>(cursor.x - screenX) / (screenWidth - 1), 0.0, 1.0);
-		const double normalizedY = std::clamp(
-			static_cast<double>(cursor.y - screenY) / (screenHeight - 1), 0.0, 1.0);
-		const double yawDegrees = -(normalizedX - 0.5) * horizontalDegrees;
-		const double pitchDegrees = -(normalizedY - 0.5) * verticalDegrees;
-
 		m_Pose = hmdPose;
-		m_Pose.qRotation = multiplyQuaternion(
-			hmdPose.qRotation, mouseAimQuaternion(yawDegrees, pitchDegrees));
-		m_Pose.deviceIsConnected = true;
+
+		POINT cursor = {};
+		const bool mouseActive = GetPhysicalCursorPos(&cursor) && cursorIsInsideScreen(
+			cursor.x, cursor.y, screenX, screenY, screenWidth, screenHeight) &&
+			hmdPose.poseIsValid && hmdPose.deviceIsConnected;
+		if (mouseActive) {
+			const double normalizedX =
+				static_cast<double>(cursor.x - screenX) / (screenWidth - 1);
+			const double normalizedY =
+				static_cast<double>(cursor.y - screenY) / (screenHeight - 1);
+			const double yawDegrees = -(normalizedX - 0.5) * horizontalDegrees;
+			const double pitchDegrees = -(normalizedY - 0.5) * verticalDegrees;
+			m_Pose.qRotation = multiplyQuaternion(
+				hmdPose.qRotation, mouseAimQuaternion(yawDegrees, pitchDegrees));
+		}
+		m_Pose.poseIsValid = mouseActive;
 		vr::VRServerDriverHost()->TrackedDevicePoseUpdated(
 			m_unObjectId, m_Pose, sizeof(vr::DriverPose_t));
 
 		if (trigger != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateBooleanComponent(
-				trigger, (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0, 0.0);
+				trigger, mouseActive && (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0, 0.0);
 		}
 		if (rightClick != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateBooleanComponent(
-				rightClick, (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0, 0.0);
+				rightClick, mouseActive && (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0, 0.0);
 		}
 		if (system != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateBooleanComponent(
-				system, (GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0, 0.0);
+				system, mouseActive && (GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0, 0.0);
 		}
 	}
 
@@ -185,9 +205,6 @@ const char* const* JJKVR::ServerDriver::GetInterfaceVersions() {
 }
 
 void JJKVR::ServerDriver::RunFrame() {
-	if (this->HMDDriver != nullptr) {
-		this->HMDDriver->frameUpdate();
-	}
 	if (this->mouseController != nullptr) {
 		this->mouseController->frameUpdate();
 	}

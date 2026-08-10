@@ -29,7 +29,6 @@ namespace JJKVR {
 		HMDDriver(std::string myserial);
 		~HMDDriver() = default;
 
-		void frameUpdate();
 		inline void setProperties();
 
 		// Inherited from JJKVRDevice, to be overridden
@@ -90,9 +89,6 @@ namespace JJKVR {
 
 		std::thread update_pose_thread_worker;
 		void update_pose_threaded();
-
-		vr::VRInputComponentHandle_t m_compClick = vr::k_ulInvalidInputComponentHandle;
-		vr::VRInputComponentHandle_t m_compSystem = vr::k_ulInvalidInputComponentHandle;
 
 		std::string PyPath;
 		std::thread startPythonTrackingClient_worker;

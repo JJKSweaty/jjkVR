@@ -29,10 +29,6 @@
                           "PyPath":  ""
                       },
     "jjkvr_mouse":  {
-                         "screenX":  0,
-                         "screenY":  0,
-                         "screenWidth":  1920,
-                         "screenHeight":  1080,
                          "horizontalDegrees":  80.0,
                          "verticalDegrees":  60.0
                      },

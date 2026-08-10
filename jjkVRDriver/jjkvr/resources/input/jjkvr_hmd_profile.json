@@ -8,16 +8,6 @@
   },
   "input_source" :
   {
-    "/input/click" : {
-        "type" : "button",
-        "order" :  1,
-        "binding_image_point" : [ 180, 110 ]
-    },
-    "/input/system" : {
-        "type" : "button",
-        "order" :  2,
-        "binding_image_point" : [ 180, 110 ]
-    },
     "/pose/raw" : {
         "type" : "pose",
         "binding_image_point" : [ 63, 148 ]

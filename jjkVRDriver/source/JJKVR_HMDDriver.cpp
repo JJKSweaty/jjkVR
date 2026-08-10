@@ -53,14 +53,6 @@ vr::EVRInitError JJKVR::HMDDriver::Activate(uint32_t unObjectId) {
 	JJKVRDevice::Activate(unObjectId);
 	this->setProperties();
 
-	const auto clickInputError = vr::VRDriverInput()->CreateBooleanComponent(
-		m_ulPropertyContainer, "/input/click", &m_compClick);
-	const auto systemInputError = vr::VRDriverInput()->CreateBooleanComponent(
-		m_ulPropertyContainer, "/input/system", &m_compSystem);
-	if (clickInputError != vr::VRInputError_None || systemInputError != vr::VRInputError_None) {
-		JJKVR::ServerDriver::Log("Input: unable to create mouse button components.\n");
-	}
-
 	int result;
 	result = hid_init(); //Result should be 0.
 	if (result) {
@@ -93,17 +85,6 @@ vr::EVRInitError JJKVR::HMDDriver::Activate(uint32_t unObjectId) {
 	this->update_pose_thread_worker = std::thread(&JJKVR::HMDDriver::update_pose_threaded, this);
 
 	return vr::VRInitError_None;
-}
-
-void JJKVR::HMDDriver::frameUpdate() {
-	if (m_compClick != vr::k_ulInvalidInputComponentHandle) {
-		vr::VRDriverInput()->UpdateBooleanComponent(
-			m_compClick, (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0, 0.0);
-	}
-	if (m_compSystem != vr::k_ulInvalidInputComponentHandle) {
-		vr::VRDriverInput()->UpdateBooleanComponent(
-			m_compSystem, (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0, 0.0);
-	}
 }
 
 void JJKVR::HMDDriver::Deactivate() {
