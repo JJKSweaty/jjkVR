@@ -9,14 +9,16 @@ stays in [vr_custom_build_plan.md](vr_custom_build_plan.md).
 JJKVR is a small GPLv3 fork of Relativty 0.1.1. It retains the original HMD,
 extended-display, distortion, HIDAPI, socket tracking, and optional embedded
 Python code. The fork changes only the runtime identity, current hardware
-defaults, SteamVR mouse inputs, build repeatability, and directly encountered
-Relativty defects.
+defaults, one additive virtual mouse controller, build repeatability, and
+directly encountered Relativty defects. Relativty's HMD/display/HID/tracking
+architecture remains intact.
 
 Current status: x64 Release builds with MSVC v142 with 0 errors and 0 warnings.
 The generated DLL exports `HmdDriverFactory`. SteamVR loads active HMD
-`jjkvr.zero`, starts the HID reader, loads the mouse binding, creates distortion
-surfaces, and reaches compositor `Startup Complete` without error 302. Physical
-left/right-click confirmation is the remaining interactive check.
+`jjkvr.zero`, starts the HID reader, adds right-hand controller `jjkvr.mouse`,
+loads its compositor binding, creates distortion surfaces, and reaches
+compositor `Startup Complete` without error 302. Visible cursor direction and
+click confirmation are the remaining interactive checks.
 
 ## Fixed hardware contract
 
@@ -32,15 +34,18 @@ left/right-click confirmation is the remaining interactive check.
 ## Deliberate JJKVR changes
 
 - Runtime name and resources use `jjkvr`; the DLL is `driver_jjkvr.dll`.
-- Head pose supplies SteamVR's dashboard laser direction.
-- Left mouse updates `/input/click`; right mouse updates `/input/system`.
+- A separate `jjkvr.mouse` tracked device supplies SteamVR's native visible
+  laser cursor without changing the HMD pose.
+- Mouse position on the 1920x1080 main monitor aims the cursor; left-click is
+  VR select, right-click is VR right-click, and middle-click toggles dashboard.
 - `R` retains Relativty's orientation recenter behavior.
 - Relativty's 3-element position normalization loop no longer writes a fourth
   element, and float normalization limits no longer truncate to integers.
 
-The desktop **Display VR View** remains a mirror. Clicking the mirror window is
-not direct VR interaction: look at a dashboard target with the headset, then
-left-click. Mouse-motion aiming is deferred until this simpler path passes.
+The desktop **Display VR View** remains a mirror. The Windows arrow is not drawn
+inside the headset; the visible VR cursor is SteamVR's laser/reticle from
+`jjkvr.mouse`. The `jjkvr_mouse` settings provide monitor origin/size and
+horizontal/vertical pointer-range tuning without modifying code.
 
 ## Build
 
@@ -75,8 +80,9 @@ until JJKVR passes.
 2. Start SteamVR and confirm the active HMD serial begins with `jjkvr.`.
 3. Confirm the compositor reaches `Startup Complete` without error 302.
 4. Vary TF-Luna distance and confirm the view rotates.
-5. Right-click to open the dashboard, aim by moving the headset/LiDAR test pose,
-   and left-click a dashboard item.
-6. Press `R` and confirm the current orientation becomes the forward reference.
+5. Middle-click to open the dashboard, move the mouse on the main monitor to
+   aim the visible VR cursor, and left-click a dashboard item.
+6. Right-click a target that supports a secondary click.
+7. Press `R` and confirm the current orientation becomes the forward reference.
 
 Do not start Driver4VR or the old Relativty Python tracker for this test.

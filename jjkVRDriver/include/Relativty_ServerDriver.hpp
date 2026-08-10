@@ -21,6 +21,8 @@
 #include "Relativty_HMDDriver.hpp"
 
 namespace Relativty {
+	class MouseController;
+
 	class ServerDriver : public vr::IServerTrackedDeviceProvider
 	{
 	public:
@@ -35,6 +37,7 @@ namespace Relativty {
 		static void Log(std::string log);
 	private:
 		HMDDriver* HMDDriver = nullptr;
+		MouseController* mouseController = nullptr;
 	};
 }
 

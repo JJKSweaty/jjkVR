@@ -4,36 +4,11 @@
    "app_key" : "openvr.component.vrcompositor",
    "bindings" : {
       "/actions/lasermouse" : {
-         "poses" : [
-            {
-               "output" : "/actions/lasermouse/in/pointer",
-               "path" : "/user/head/pose/raw"
-            }
-         ],
-         "sources" : [
-            {
-               "inputs" : {
-                  "click" : {
-                     "output" : "/actions/lasermouse/in/leftclick"
-                  }
-               },
-               "mode" : "button",
-               "path" : "/user/head/input/click"
-            }
-         ]
+         "poses" : [],
+         "sources" : []
       },
       "/actions/system" : {
-         "sources" : [
-            {
-               "inputs" : {
-                  "click" : {
-                     "output" : "/actions/system/in/opendashboard"
-                  }
-               },
-               "mode" : "button",
-               "path" : "/user/head/input/system"
-            }
-         ]
+         "sources" : []
       }
    },
    "category" : "steamvr_input",
