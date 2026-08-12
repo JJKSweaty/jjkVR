@@ -329,7 +329,8 @@ void JJKVR::HMDDriver::retrieve_client_vector_packet_threaded() {
 			Normalize(coordinate_normalized, coordinate, normalize_max, normalize_min, this->upperBound, this->lowerBound, scales_coordinate_meter, offset_coordinate);
 
 			this->vector_xyz[0] = coordinate_normalized[1];
-			this->vector_xyz[1] = coordinate_normalized[2];
+			/* Keep the sideways axis fixed so small tracker bias cannot show up as right/left drift. */
+			this->vector_xyz[1] = 0.0f;
 			this->vector_xyz[2] = coordinate_normalized[0];
 			this->new_vector_avaiable = true;
 		}
