@@ -31,8 +31,19 @@
 #include "JJKVR_components.h"
 #include "JJKVR_base_device.h"
 
-
+#include <cmath>
+#include <cstring>
 #include <string>
+
+namespace {
+	constexpr int kHidReportSize = 64;
+	constexpr int kQuaternionOffset = 1;
+	constexpr int kPositionOffset = 17;
+	constexpr int kFlagsOffset = 29;
+	constexpr int kVersionOffset = 30;
+	constexpr uint8_t kPositionValid = 0x01;
+	constexpr uint8_t kPoseProtocolVersion = 2;
+}
 
 inline vr::HmdQuaternion_t HmdQuaternion_Init(double w, double x, double y, double z) {
 	vr::HmdQuaternion_t quat;
@@ -166,24 +177,17 @@ void JJKVR::HMDDriver::calibrate_quaternion() {
 }
 
 void JJKVR::HMDDriver::retrieve_device_quaternion_packet_threaded() {
-	uint8_t packet_buffer[64];
+	uint8_t packet_buffer[kHidReportSize];
 	int16_t quaternion_packet[4];
-	//this struct is for mpu9250 support
-	#pragma pack(push, 1)
-	struct pak {
-		uint8_t id;
-		float quat[4];
-		uint8_t rest[47];
-	};
-	#pragma pack(pop)
 	int result;
 	JJKVR::ServerDriver::Log("Thread1: successfully started\n");
 	while (this->retrieve_quaternion_isOn) {
-		result = hid_read(this->handle, packet_buffer, 64); //Result should be greater than 0.
+		result = hid_read(this->handle, packet_buffer, kHidReportSize); //Result should be greater than 0.
 		if (result > 0) {
-
-
 			if (m_bIMUpktIsDMP) {
+				if (result < 15 || packet_buffer[0] != 1) {
+					continue;
+				}
 
 				quaternion_packet[0] = ((packet_buffer[1] << 8) | packet_buffer[2]);
 				quaternion_packet[1] = ((packet_buffer[5] << 8) | packet_buffer[6]);
@@ -210,21 +214,48 @@ void JJKVR::HMDDriver::retrieve_device_quaternion_packet_threaded() {
 				this->new_quaternion_avaiable = true;
 
 			}
-			else {
-				
-				pak* recv = (pak*)packet_buffer;
-				this->quat[0] = recv->quat[0];
-				this->quat[1] = recv->quat[1];
-				this->quat[2] = recv->quat[2];
-				this->quat[3] = recv->quat[3];
+			else if (result == kHidReportSize && packet_buffer[0] == 1) {
+				float received_quaternion[4];
+				float norm_squared = 0.0f;
+				std::memcpy(received_quaternion, packet_buffer + kQuaternionOffset, sizeof(received_quaternion));
+				for (float component : received_quaternion) {
+					if (!std::isfinite(component)) {
+						norm_squared = 0.0f;
+						break;
+					}
+					norm_squared += component * component;
+				}
+				if (norm_squared < 0.25f || norm_squared > 2.25f) {
+					continue;
+				}
+
+				const float inverse_norm = 1.0f / std::sqrt(norm_squared);
+				for (int component = 0; component < 4; component++) {
+					this->quat[component] = received_quaternion[component] * inverse_norm;
+				}
 
 				this->calibrate_quaternion();
 
+				if (!this->start_tracking_server &&
+					packet_buffer[kVersionOffset] == kPoseProtocolVersion &&
+					(packet_buffer[kFlagsOffset] & kPositionValid) != 0) {
+					float received_position[3];
+					std::memcpy(received_position, packet_buffer + kPositionOffset, sizeof(received_position));
+					if (std::isfinite(received_position[0]) &&
+						std::isfinite(received_position[1]) &&
+						std::isfinite(received_position[2]) &&
+						std::fabs(received_position[0]) <= 10.0f &&
+						std::fabs(received_position[1]) <= 10.0f &&
+						std::fabs(received_position[2]) <= 10.0f) {
+						for (int axis = 0; axis < 3; axis++) {
+							this->vector_xyz[axis] = received_position[axis];
+						}
+						this->new_vector_avaiable = true;
+					}
+				}
+				// ponytail: keep the legacy atomic handoff; add a snapshot lock if split frames become visible.
 				this->new_quaternion_avaiable = true;
-
 			}
-
-
 		}
 		else {
 			JJKVR::ServerDriver::Log("Thread1: Issue while trying to read USB\n");

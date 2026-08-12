@@ -1,0 +1,9 @@
+# Static material for the JJKVR right-hand render model.
+newmtl jjkvr_hand
+Ka 0.18 0.18 0.18
+Kd 1.0 1.0 1.0
+Ks 0.04 0.04 0.04
+Ns 8.0
+d 1.0
+illum 2
+map_Kd jjkvr_hand_right.png

@@ -62,7 +62,8 @@ class JJKVR::MouseController : public JJKVRDevice<false> {
 public:
 	MouseController(HMDDriver* hmd) : JJKVRDevice("mouse", "jjkvr_"), hmd(hmd) {
 		static const char* const mouseSection = "jjkvr_mouse";
-		m_sRenderModelPath = "generic_controller";
+		// ponytail: a static hand is enough for the mouse pointer; add a skeleton only with finger inputs.
+		m_sRenderModelPath = "{jjkvr}/rendermodels/jjkvr_hand_right";
 		m_sBindPath = "{jjkvr}/input/jjkvr_mouse_profile.json";
 		screenX = vr::VRSettings()->GetInt32(
 			k_pch_ExtDisplay_Section, k_pch_ExtDisplay_WindowX_Int32);

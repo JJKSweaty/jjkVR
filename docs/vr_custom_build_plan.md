@@ -28,7 +28,7 @@ Keeping this separation clear is what lets 5 people work in parallel without blo
 | Component | Requirement | Notes / Example Parts |
 |---|---|---|
 | MCU | USB HID-capable, I2C master, native USB, hardware FPU preferred | **STM32F411 ("Black Pill" class) — recommended.** Cortex-M4 with hardware FPU (faster/more stable quaternion math than 8-bit AVR), clean USB OTG FS, cheap (~$2–4). Avoid STM32F103 "Blue Pill" clones — many ship with wrong crystal load capacitors, causing flaky USB enumeration. Fallback: ATmega32U4 (proven, zero toolchain friction, what stock firmware targets) if the firmware owner wants to avoid any STM32duino setup risk. |
-| IMU | Supported by FastIMU, I2C interface | MPU6050 (cheapest, 6-axis, drifts fastest) / **ICM20948 (chosen — GY-ICM20948V2)** — 9-axis w/ magnetometer, directly supported by FastIMU, same family the stock Relativty guide already validates. Fusion (Mahony/Madgwick) runs in firmware, not onboard the chip. BNO085 remains a valid alternative (onboard fusion, but needs a different library and more RAM — see note in §4 history) if you ever want to swap. |
+| IMU | I2C raw accel/gyro/magnetometer | **ICM20948 (chosen — GY-ICM20948V2)**. Fusion runs in STM32 firmware; FastIMU is a register/example reference only. |
 | Display | Small, high-res, high-refresh, PC-compatible | Needs a driver/controller board — buy display + driver as a matched bundle, never separately. ⚠️ Most cheap driver boards are built around the Toshiba TC358870XBG chip (or a clone of it) — be skeptical of seller claims about supported resolutions/refresh rates, and order one unit to verify before bulk-ordering |
 | Lenses | 40mm diameter / 50mm focal length | Aliexpress/AliExpress-equivalent, biconvex or Fresnel |
 | Strap + facial interface | Adjustable, washable foam | HTC Vive replacement parts fit well |
@@ -46,7 +46,7 @@ Keeping this separation clear is what lets 5 people work in parallel without blo
 This replaces the "Relativty Motherboard" / off-the-shelf Arduino Pro Micro approach with one integrated board.
 
 **Functional blocks the PCB must include:**
-1. **MCU** — **STM32F411 (recommended)**: Cortex-M4 with hardware FPU, native USB OTG FS for HID, plenty of RAM/flash headroom for future features. With the ICM20948 (chosen IMU), the FPU's main benefit is running FastIMU's Mahony/Madgwick fusion math faster and more precisely than an 8-bit core would — a "better" pick, not a hard requirement. Requires the `STM32duino` core so FastIMU can be built with minimal porting effort (same category of work as an RP2040 port). Design in a crystal + correct load capacitors carefully — this is the exact failure mode that makes cheap STM32F103 "Blue Pill" clones unreliable, and you control the layout now, so get it right. **Fallback: ATmega32U4** — genuinely viable with this IMU choice, since FastIMU + ICM20948 is the same combination the stock Relativty guide already validates on Pro Micro-class boards; pick this if the firmware owner wants to avoid any `STM32duino` toolchain setup.
+1. **MCU** — **STM32F411 (chosen)**: Cortex-M4 with hardware FPU, native USB OTG FS for HID, and enough RAM/flash for float fusion. The implemented toolchain is STM32Cube HAL/CMake. Design in the external crystal and load capacitors carefully because USB timing depends on them.
 2. **IMU footprint** — place it centrally and away from the USB connector/regulator (magnetic + electrical noise source) if using a magnetometer-equipped IMU.
 3. **Power regulation** — a linear or buck regulator stepping USB 5V down to whatever the IMU needs (often 3.3V), with reverse-polarity and overcurrent protection. This is the #1 reliability upgrade over the stock design.
 4. **USB-C connector** with proper CC resistors for a data+power-only device.
@@ -74,17 +74,20 @@ This replaces the "Relativty Motherboard" / off-the-shelf Arduino Pro Micro appr
 
 ## 4. Firmware Requirements
 
-Implementation status and bring-up steps live in the short
-[firmware build plan](firmware_build_plan.md). The current temporary test maps
-TF-Luna range to HID yaw so the sensor-to-SteamVR path can be proven without the IMU.
+**Current implementation note:** the passed TF-Luna synthetic-yaw test has
+been replaced by live ICM-20948 fusion and HID pose protocol v2. The CubeMX
+project uses a minimal HAL C register driver and local Mahony filter; FastIMU is
+a reference, not a linked dependency. Calibration is currently volatile boot
+stationary accel/gyro averaging. Persistent mounted magnetometer calibration remains
+future work. See [firmware build plan](firmware_build_plan.md) for the current
+source of truth.
 
-- Read IMU over I2C at a consistent rate — for the **ICM20948 (chosen IMU)**, the FastIMU library's calibrated sketch is the reference implementation, and it's the same one the stock Relativty build guide already uses.
-- Run sensor fusion **in firmware** via FastIMU (Mahony/Madgwick) to turn the ICM20948's raw accel/gyro/magnetometer readings into quaternion or Euler orientation data — unlike the BNO085, the ICM20948 has no onboard fusion silicon, so this step happens on your MCU. This is the main place STM32F411's hardware FPU earns its keep over the ATmega32U4 fallback (§3): faster, more numerically stable fusion math at the same or higher output rate.
-- Package orientation data into a USB HID report the SteamVR driver expects (match the existing Relativty driver's HID report format so the PC-side driver doesn't need rewriting — or update both in lockstep if you change the protocol).
-- Support an EEPROM-stored calibration routine, triggerable over serial, so users don't recalibrate every boot.
-- If moving to STM32F411: set up `STM32duino`, confirm FastIMU compiles against it, and configure USB OTG FS as a HID device (the STM32duino core has a well-trodden USB HID example to start from). Take advantage of the hardware FPU — use the sensor fusion library's float (not fixed-point) code path for the accuracy/latency benefit that's the whole reason to pick this chip.
-- Optional: drive the status LED (see §6) based on connection/calibration state, since firmware is what actually knows that state. HadesVR's approach is worth copying directly: define a small color code (e.g. solid green = tracking healthy, blinking red = IMU not found, blinking blue = calibrating) rather than a single on/off indicator — cheap to implement, and it turns "is this even working?" from a serial-monitor debugging session into a glance.
-- Account for physical IMU mounting orientation in the calibration routine — if the board sits flat during calibration but is mounted vertically in the final shell (or vice versa), the calibration reference frame needs to account for that, or calibration needs to happen in the final mounted orientation. Make this a firmware `#define`-style toggle rather than hardcoding one orientation.
+- Read the ICM-20948 over I2C at a measured, consistent rate.
+- Run float quaternion fusion on the STM32F411 hardware FPU.
+- Keep the 64-byte HID packet versioned and update firmware/driver in lockstep.
+- Calibrate in the final mounting orientation; persistent magnetometer calibration
+  remains future work.
+- Use LEDs for startup, tracking, and I2C/IMU failure state.
 
 ---
 
@@ -170,7 +173,7 @@ Everything below can happen before the team spends a single dollar. This is wher
 |---|---|
 | **All 5 (together)** | Hold the Phase 0 alignment meeting: lock in MCU choice (STM32F411 vs ATmega32U4 fallback), IMU choice, HID report format, and PCB mounting-hole coordinate system before any design work starts. |
 | **PCB/Electronics Lead** | Install KiCad (free) and start the schematic using the confirmed MCU/IMU. Study `HadesVR/Basic-HMD-PCB`'s open schematic directly — no need to reinvent the regulator/filtering design from scratch. |
-| **Firmware Engineer** | Install Arduino IDE + `STM32duino` core, install FastIMU library, and get it compiling against a *simulated* target (even without hardware yet) to catch toolchain issues early. Read `HadesVRBLE`'s firmware for the ESP32 wireless reference. |
+| **Firmware Engineer** | Build the Cube HAL/CMake target and run the host pose-math check before hardware testing. |
 | **Mechanical/Shell Designer** | Start CAD (Fusion 360 has a free personal-use tier; FreeCAD is fully free) using the original Relativty `.STL` files as a base. Can model the entire shell, IPD slider mechanism, and mounting bosses before a single part is printed. |
 | **Software/Driver Engineer** | Fork the Relativty OpenVR driver repo, read through the existing `default.vrsettings` structure, and draft the updated HID-parsing code path against the *planned* report format — this can be written and even unit-tested without real hardware. |
 | **Systems Integration/QA** | Build the actual BOM/cost tracker (this spreadsheet) and start pricing out real supplier quotes without ordering. Also the right person to read HadesVR's `Tracking.md`/`Controllers.md` in full and draft the v2 tracking spec now, while it's fresh. |

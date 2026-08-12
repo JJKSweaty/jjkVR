@@ -16,8 +16,14 @@ Register `jjkvr\driver.vrdrivermanifest` through SteamVR's `vrpathreg.exe`.
 The default hardware settings are STM32 VID/PID `0x0483:0x572B`, a 2880x1440
 extended display at `(1920,0)`, and 120 Hz.
 
+The 64-byte HID report keeps report ID `1` and quaternion `(w,x,y,z)` at bytes
+0-16. Protocol v2 additionally reads OpenVR position metres from bytes 17-28
+when byte 29 has position-valid bit 0 set and byte 30 is `2`. Legacy
+orientation-only reports remain supported; HID position is ignored when the
+optional TCP tracking server is enabled.
+
 - Move the cursor right onto the 2880x1440 headset display to enable and aim
-  SteamVR's visible laser cursor.
+  SteamVR's visible laser cursor and its static right-hand model.
 - Left mouse selects; right mouse sends a VR right-click.
 - Middle mouse opens or closes the SteamVR dashboard.
 - `R` recenters orientation while HID reports are arriving.
@@ -29,4 +35,6 @@ native laser/reticle while the cursor is on the headset display. Tune
 `jjkvr_mouse` if the pointer's angular range changes.
 
 Relativty is GPLv3; see `LICENSE`. JJKVR retains the original copyright and
-license notices.
+license notices. The CC0 hand geometry is adapted from Robin Lamb's
+[Low Poly FPS Rifle and Hands](https://opengameart.org/content/low-poly-fps-rifle-and-hands);
+its texture was generated for JJKVR.

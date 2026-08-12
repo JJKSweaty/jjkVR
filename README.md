@@ -21,27 +21,27 @@ Commercial VR headsets are closed systems — the tracking hardware, firmware, a
 ## How it works
 
 ```text
-[ICM20948 IMU] --I2C--> [STM32F411 MCU Board] --USB HID--> [PC: SteamVR/OpenVR Driver]
+[ICM20948 IMU + TF-Luna] --I2C--> [STM32F411 MCU] --USB HID--> [SteamVR/OpenVR Driver]
 
 [PC GPU] --HDMI/DP--> [Display Driver Board] --> [2K 120Hz HMD Panel]
 ```
 
 * The **ICM20948** IMU reports raw accelerometer, gyroscope, and magnetometer data over I2C.
-* The **STM32F411** reads that data, calibrates it, and runs FastIMU sensor fusion to compute headset orientation.
-* Orientation is packed into **USB HID reports** and streamed to the PC at a steady rate.
+* The **STM32F411** reads that data, calibrates stationary accel/gyro bias at startup, and runs float Mahony sensor fusion.
+* Orientation and bounded experimental inertial position are packed into **USB HID reports**; an optional rigidly mounted TF-Luna can correct only forward position.
 * A **custom OpenVR driver** (adapted from Relativty's) parses those HID reports and feeds pose data into SteamVR.
 * Separately, the PC's GPU output is converted by a **display driver board** to drive the **2K 120Hz HMD panel**.
 
-The first version targets reliable wired **3-DoF orientation tracking**; the architecture leaves room for IR-based 6-DoF positional tracking and wireless streaming later on.
+The reliable target remains wired **3-DoF orientation tracking**. IMU translation is a short-motion experiment, not drift-free room-scale 6-DoF; the architecture leaves room for an external positional reference later.
 
 ## Features
 
 * Custom HMD controller PCB (not an off-the-shelf dev board)
-* 9-DoF IMU sensor fusion via FastIMU
+* 9-axis IMU sensor fusion in compact HAL-native C
 * USB HID pose streaming with a defined custom report format
 * SteamVR/OpenVR integration through a Relativty-derived driver
 * 2K 120Hz display target with a dedicated HDMI/DP-to-MIPI driver board
-* On-device calibration storage, so the headset doesn't need to recalibrate every boot
+* Stationary accel/gyro calibration at every boot
 * Status LEDs for calibration, IMU fault, and tracking state
 
 ## Hardware
@@ -49,7 +49,8 @@ The first version targets reliable wired **3-DoF orientation tracking**; the arc
 | Component                    | Purpose                                                            |
 | ---------------------------- | ------------------------------------------------------------------ |
 | STM32F411                    | Main MCU — IMU reads, sensor fusion, calibration, USB HID          |
-| ICM20948                     | 9-DoF IMU (accelerometer, gyroscope, magnetometer)                 |
+| ICM20948                     | 9-axis IMU (accelerometer, gyroscope, magnetometer)                |
+| TF-Luna                      | Optional forward range correction after rigid mounting            |
 | Custom PCB                   | Integrates MCU, IMU interface, USB-C, regulator, LEDs, test points |
 | 2K 120Hz display             | Main HMD panel                                                     |
 | HDMI/DP-to-MIPI driver board | Converts PC GPU output for the headset panel                       |
@@ -59,7 +60,7 @@ The PCB itself is designed in KiCad and includes USB-C with proper CC resistors,
 
 ## Tech stack
 
-* **Firmware:** C/C++, STM32F411, STM32duino, FastIMU
+* **Firmware:** C11, STM32F411 Cube HAL/CMake, float Mahony fusion
 * **Sensors:** ICM20948, I2C, 9-DoF sensor fusion
 * **USB:** USB HID pose reports
 * **PCB:** KiCad, USB-C, 3.3V regulation
@@ -70,5 +71,5 @@ The PCB itself is designed in KiCad and includes USB-C with proper CC resistors,
 
 * [Relativty](https://github.com/relativty/Relativty) — open-source VR headset and OpenVR driver reference
 * [HadesVR](https://github.com/UkonnRa/HadesVR) — open-source HMD and tracking reference
-* [FastIMU](https://github.com/LiquidCGS/FastIMU) — IMU sensor fusion library
+* [FastIMU](https://github.com/LiquidCGS/FastIMU) — ICM-20948 register and fusion reference
 * SteamVR / OpenVR — driver architecture jjkVR integrates with

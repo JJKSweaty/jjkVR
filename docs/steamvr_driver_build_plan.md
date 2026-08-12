@@ -23,19 +23,29 @@ click confirmation are the remaining interactive checks.
 ## Fixed hardware contract
 
 - USB HID VID/PID: `0x0483:0x572B` (`1155:22315`).
-- HID input report: 64 bytes; byte 0 is report ID `1`; bytes 1-16 are
-  little-endian float quaternion `(w, x, y, z)`.
+- HID input report v2:
+
+  | Offset | Content |
+  |---:|---|
+  | 0 | report ID `1` |
+  | 1-16 | little-endian float32 quaternion `(w,x,y,z)`, already in OpenVR coordinates |
+  | 17-28 | little-endian float32 position `(x,y,z)` in metres |
+  | 29 | flags: `0x01` position valid, `0x02` TF-Luna correction accepted |
+  | 30 | protocol version `2` |
+  | 31-63 | reserved, currently zero |
+
+  The driver consumes v2 HID position only when `startTrackingServer` is
+  false. Legacy ID-1 quaternion reports remain orientation-compatible.
 - `hmdIMUdmpPackets` is `false`.
 - Headset display: `(1920,0)`, 2880x1440, 120 Hz.
-- The temporary `LIDAR_HID_TEST` firmware sends synthetic yaw in this same
-  quaternion field. The future ICM-20948 fusion output replaces that test data
-  without changing the driver packet format.
+- Firmware maps its headset axes to OpenVR before sending; the driver does not
+  perform a second coordinate transform.
 
 ## Deliberate JJKVR changes
 
 - Runtime name and resources use `jjkvr`; the DLL is `driver_jjkvr.dll`.
 - A separate `jjkvr.mouse` tracked device supplies SteamVR's native visible
-  laser cursor without changing the HMD pose.
+  laser cursor and a static right-hand model without changing the HMD pose.
 - Mouse position inside the 2880x1440 headset display aims the cursor;
   left-click is VR select, right-click is VR right-click, and middle-click
   toggles dashboard. On the main monitor, the VR pose is invalid and its
@@ -82,13 +92,17 @@ until JJKVR passes.
 1. Confirm Windows shows HID `VID_0483&PID_572B` and leave BOOT0 low.
 2. Start SteamVR and confirm the active HMD serial begins with `jjkvr.`.
 3. Confirm the compositor reaches `Startup Complete` without error 302.
-4. Vary TF-Luna distance and confirm the view rotates.
-5. On the main monitor, press left, right, and middle mouse over a harmless
+4. Remain still through startup, then verify yaw, pitch, and roll signs.
+5. Verify short forward/left/up inertial movements in VR; expect drift.
+6. With the default-enabled TF-Luna fusion rigidly mounted, verify it only
+   corrects forward/back motion against a fixed target and does not change
+   rotation.
+7. On the main monitor, press left, right, and middle mouse over a harmless
    desktop area; confirm no VR laser, click, or dashboard action appears.
-6. Move the cursor right onto the headset display, middle-click to open the
+8. Move the cursor right onto the headset display, middle-click to open the
    dashboard, aim the visible VR cursor, and left-click a dashboard item.
-7. Right-click a target that supports a secondary click.
-8. Move the cursor back to the main monitor and confirm the VR laser disappears.
-9. Press `R` and confirm the current orientation becomes the forward reference.
+9. Right-click a target that supports a secondary click.
+10. Move the cursor back to the main monitor and confirm the VR laser disappears.
+11. Press `R` and confirm the current orientation becomes the forward reference.
 
 Do not start Driver4VR or the old Relativty Python tracker for this test.
