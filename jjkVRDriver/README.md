@@ -31,6 +31,10 @@ optional TCP tracking server is enabled.
   present.
 - `R` recenters orientation while HID reports are arriving.
 
+Keyboard movement now maps to the virtual joystick for seated locomotion: `W`
+and `Up` move forward, `S` and `Down` move back, `A` and `Left` move left, and
+`D` and `Right` move right. Mouse still controls the pointer and clicks.
+
 If you do not want to use a mouse, the driver also reads an XInput gamepad for
 that same right-hand controller path. A PlayStation controller works if Windows
 is exposing it as XInput, which usually means Steam Input or DS4Windows is doing

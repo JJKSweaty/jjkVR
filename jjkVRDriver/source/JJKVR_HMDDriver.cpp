@@ -247,9 +247,18 @@ void JJKVR::HMDDriver::retrieve_device_quaternion_packet_threaded() {
 				if (!this->start_tracking_server &&
 					packet_buffer[kVersionOffset] == kPoseProtocolVersion &&
 					(packet_buffer[kFlagsOffset] & kPositionValid) != 0) {
-						this->vector_xyz[0] = 0.0f;
-						this->vector_xyz[1] = 0.0f;
-						this->vector_xyz[2] = 0.0f;
+						float received_position[3];
+						std::memcpy(received_position, packet_buffer + kPositionOffset, sizeof(received_position));
+						if (std::isfinite(received_position[0]) &&
+							std::isfinite(received_position[1]) &&
+							std::isfinite(received_position[2]) &&
+							std::fabs(received_position[0]) <= 10.0f &&
+							std::fabs(received_position[1]) <= 10.0f &&
+							std::fabs(received_position[2]) <= 10.0f) {
+							this->vector_xyz[0] = received_position[0];
+							this->vector_xyz[1] = received_position[1];
+							this->vector_xyz[2] = received_position[2];
+						}
 						this->new_vector_avaiable = true;
 				}
 				// ponytail: keep the legacy atomic handoff; add a snapshot lock if split frames become visible.

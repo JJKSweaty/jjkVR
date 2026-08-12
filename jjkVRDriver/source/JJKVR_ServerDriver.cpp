@@ -83,6 +83,11 @@ namespace {
 		}
 		return 0.0f;
 	}
+
+	bool keyDown(int key)
+	{
+		return (GetAsyncKeyState(key) & 0x8000) != 0;
+	}
 }
 
 class JJKVR::MouseController : public JJKVRDevice<true> {
@@ -192,6 +197,11 @@ public:
 
 		XINPUT_STATE gamepadState = {};
 		const bool gamepadConnected = XInputGetState(0U, &gamepadState) == ERROR_SUCCESS;
+		const float moveX = (keyDown(VK_A) || keyDown(VK_LEFT) ? -1.0f : 0.0f) +
+			(keyDown(VK_D) || keyDown(VK_RIGHT) ? 1.0f : 0.0f);
+		const float moveY = (keyDown(VK_W) || keyDown(VK_UP) ? 1.0f : 0.0f) +
+			(keyDown(VK_S) || keyDown(VK_DOWN) ? -1.0f : 0.0f);
+		const bool keyboardMoving = (moveX != 0.0f) || (moveY != 0.0f);
 
 		POINT cursor = {};
 		MONITORINFO monitorInfo = { sizeof(MONITORINFO) };
@@ -323,19 +333,19 @@ public:
 			((gamepadState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB) != 0) :
 			((GetAsyncKeyState(VK_XBUTTON2) & 0x8000) != 0));
 		if (joystickClick != vr::k_ulInvalidInputComponentHandle) {
-			vr::VRDriverInput()->UpdateBooleanComponent(joystickClick, stickPressed, 0.0);
+			vr::VRDriverInput()->UpdateBooleanComponent(joystickClick, stickPressed || keyboardMoving, 0.0);
 		}
 		if (joystickTouch != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateBooleanComponent(
-				joystickTouch, trackingValid && (cursorAvailable || gamepadConnected), 0.0);
+				joystickTouch, trackingValid && (cursorAvailable || gamepadConnected || keyboardMoving), 0.0);
 		}
 		if (joystickX != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateScalarComponent(
-				joystickX, static_cast<float>(normalizedX * 2.0 - 1.0), 0.0);
+				joystickX, keyboardMoving ? moveX : 0.0f, 0.0);
 		}
 		if (joystickY != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateScalarComponent(
-				joystickY, static_cast<float>(1.0 - normalizedY * 2.0), 0.0);
+				joystickY, keyboardMoving ? moveY : 0.0f, 0.0);
 		}
 	}
 
