@@ -334,7 +334,7 @@ JJKVR::HMDDriver::HMDDriver(std::string myserial):JJKVRDevice(myserial, "jjkvr_"
 	static const char* const jjkvr_hmd_section = "jjkvr_hmd";
 
 	// openvr api stuff
-	m_sRenderModelPath = "{jjkvr}/rendermodels/generic_hmd";
+	m_sRenderModelPath = "generic_hmd";
 	m_sBindPath = "{jjkvr}/input/jjkvr_hmd_profile.json";
 
 	m_spExtDisplayComp = std::make_shared<JJKVR::JJKVRExtendedDisplayComponent>();

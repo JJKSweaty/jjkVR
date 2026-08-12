@@ -1,0 +1,15 @@
+{
+  "action_manifest_version": 0,
+  "alias_info": {},
+  "app_key": "openvr.component.vrcompositor",
+  "bindings": {
+    "/actions/lasermouse": { "poses": [], "sources": [] },
+    "/actions/system": { "sources": [] }
+  },
+  "category": "steamvr_input",
+  "controller_type": "jjkvr_hmd",
+  "description": "",
+  "name": "JJKVR HMD bindings",
+  "options": {},
+  "simulated_actions": []
+}

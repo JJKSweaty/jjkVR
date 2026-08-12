@@ -11,8 +11,8 @@ been replaced by the live IMU pose implementation.
 - About one second of level, stationary accel/gyro calibration at every boot.
 - Float Mahony orientation fusion with acceleration and magnetic-disturbance
   rejection.
-- Bounded acceleration integration for short demonstration movement on three
-  axes, with stationary zero-velocity updates.
+- Bounded acceleration integration for short forward/back demonstration
+  movement, with stationary zero-velocity updates.
 - 64-byte HID pose protocol v2 sent at up to 100 Hz.
 - TF-Luna forward correction enabled by default for a rigid body-`+X` mount;
   builds without the sensor can disable it at compile time.
@@ -27,11 +27,12 @@ Headset body axes are right-handed: `+X` forward toward the monitor/display,
 `+Y` left, and `+Z` up. Firmware converts to OpenVR `+X` right, `+Y` up,
 `-Z` forward before sending the report.
 
-The IMU supplies reliable orientation but not drift-free position. Its current
-translation output is intentionally bounded demo behavior. One rigid TF-Luna
-can constrain the world-forward coordinate against a fixed plane; it cannot
-observe lateral or vertical position, a moving target, or its own motion when
-loose. Stable room-scale 6-DoF needs another positional reference.
+The IMU supplies reliable orientation but not drift-free position. Translation
+is deliberately limited to body `+X`, the only axis this TF-Luna arrangement
+can correct. Lateral and vertical output stay zero instead of drifting. One
+rigid TF-Luna can constrain forward position against a fixed plane; it cannot
+observe a moving target or its own motion when loose. Stable room-scale 6-DoF
+needs another positional reference.
 
 ## HID contract
 
@@ -61,8 +62,8 @@ change.
 4. Build/install the driver using
    [steamvr_driver_build_plan.md](steamvr_driver_build_plan.md), then verify all
    three rotation signs in SteamVR Display VR View.
-5. Test only short forward/left/up translations and record drift. Do not tune
-   LiDAR behavior until orientation and the physical axis signs pass.
+5. Test only short forward/back translations. Lateral and vertical output must
+   remain zero; do not tune LiDAR behavior until orientation signs pass.
 6. Rigidly align TF-Luna with body `+X`, aim at a fixed opaque plane, and verify
    that only forward/back position is corrected. Disable
    `ENABLE_LIDAR_FORWARD_FUSION` only for builds without the sensor.

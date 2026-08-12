@@ -44,7 +44,7 @@ Arduino compatibility layer to this CubeMX C project.
 Keep the mounted headset still, level, and with body `+Z` up at every power-up.
 Firmware averages 200 accel/gyro samples over about one second, then treats the
 first fused orientation and position as the origin. Calibration is RAM-only.
-After the headset is stationary for about 150 ms, the fusion code slowly learns
+After the headset is stationary for about 150 ms, the fusion code quickly learns
 only residual gyro rates below 0.25 degrees per second; faster motion is never
 used for bias learning.
 The magnetometer trim constants near the top of `Core/Src/icm20948.c` must be
@@ -72,9 +72,10 @@ active at rest so accumulated forward drift converges back to the measured
 position. They never change orientation or the other two position axes.
 
 A 9-axis IMU has nine sensor channels, not nine pose degrees of freedom.
-Integrated acceleration here is bounded demonstration tracking and will drift;
-one TF-Luna beam can constrain only forward distance. Stable room-scale 6-DoF
-still needs an external positional reference.
+Translation is intentionally limited to body `+X`: the IMU predicts forward
+motion and the one TF-Luna beam corrects it. Lateral and vertical position stay
+zero instead of exposing unobservable drift. Stable room-scale 6-DoF still
+needs an external positional reference.
 
 `ENABLE_IMU_DEMO_POSITION` defaults to `1` because this build is intended to
 exercise that requested movement path. Set it to `0` to keep SteamVR
@@ -104,8 +105,8 @@ STM32CubeProgrammer.
 
 1. Hold the headset still and level, body `+Z` up, until the LED turns green.
 2. Verify yaw, pitch, and roll directions before testing translation.
-3. Make short, deliberate forward/left/up movements and verify the matching VR
-   direction; expect inertial drift.
+3. Make short, deliberate forward/back movements and verify the matching VR
+   direction; lateral and vertical translation intentionally remain fixed.
 4. With the TF-Luna rigidly mounted, test forward/back motion against a fixed
    opaque target at least 20 cm away and verify drift settles when stationary.
 

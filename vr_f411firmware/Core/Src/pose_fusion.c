@@ -13,7 +13,7 @@
 #define STATIONARY_SAMPLE_COUNT       30U
 /* Only very slow stationary residuals are bias; ordinary head motion is not. */
 #define GYRO_BIAS_LEARN_MAX_DPS        0.25f
-#define GYRO_BIAS_LEARN_PER_SECOND     0.50f
+#define GYRO_BIAS_LEARN_PER_SECOND     4.0f
 #define LINEAR_ACCEL_DEADBAND_MPS2    0.12f
 #define VELOCITY_DAMPING_PER_SECOND   1.0f
 #define MAX_DEMO_VELOCITY_MPS         3.0f
@@ -359,20 +359,17 @@ void PoseFusion_Update(PoseFusion *fusion, const float accel_g[3],
   }
 
   damping = fmaxf(0.0f, 1.0f - VELOCITY_DAMPING_PER_SECOND * dt_s);
-  for (uint32_t axis = 0U; axis < 3U; axis++)
-  {
-    fusion->position_m[axis] += fusion->velocity_mps[axis] * dt_s +
-                                0.5f * linear_accel_mps2[axis] * dt_s * dt_s;
-    fusion->velocity_mps[axis] =
-        (fusion->velocity_mps[axis] + linear_accel_mps2[axis] * dt_s) * damping;
-    fusion->velocity_mps[axis] = clampf(fusion->velocity_mps[axis],
-                                        -MAX_DEMO_VELOCITY_MPS,
-                                        MAX_DEMO_VELOCITY_MPS);
-    /* ponytail: bound IMU-only drift; replace position with an external tracker for room scale. */
-    fusion->position_m[axis] = clampf(fusion->position_m[axis],
-                                      -MAX_DEMO_POSITION_M,
-                                      MAX_DEMO_POSITION_M);
-  }
+  /* ponytail: one forward LiDAR observes body X only, so do not advertise drifting Y/Z. */
+  fusion->position_m[0] += fusion->velocity_mps[0] * dt_s +
+                           0.5f * linear_accel_mps2[0] * dt_s * dt_s;
+  fusion->velocity_mps[0] =
+      (fusion->velocity_mps[0] + linear_accel_mps2[0] * dt_s) * damping;
+  fusion->velocity_mps[0] = clampf(fusion->velocity_mps[0],
+                                   -MAX_DEMO_VELOCITY_MPS,
+                                   MAX_DEMO_VELOCITY_MPS);
+  fusion->position_m[0] = clampf(fusion->position_m[0],
+                                 -MAX_DEMO_POSITION_M,
+                                 MAX_DEMO_POSITION_M);
 }
 
 void PoseFusion_GetOpenVrPose(const PoseFusion *fusion, float quaternion[4],
@@ -387,8 +384,8 @@ void PoseFusion_GetOpenVrPose(const PoseFusion *fusion, float quaternion[4],
   quaternion[1] = -relative[2];
   quaternion[2] = relative[3];
   quaternion[3] = -relative[1];
-  position_m[0] = -fusion->position_m[1];
-  position_m[1] = fusion->position_m[2];
+  position_m[0] = 0.0f;
+  position_m[1] = 0.0f;
   position_m[2] = -fusion->position_m[0];
 }
 

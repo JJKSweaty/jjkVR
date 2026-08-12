@@ -58,8 +58,8 @@ int main(void)
   fusion.position_m[1] = 0.5f;
   fusion.position_m[2] = 0.25f;
   PoseFusion_GetOpenVrPose(&fusion, quaternion, position_m);
-  assert(close_to(position_m[0], -0.5f, 0.001f));
-  assert(close_to(position_m[1], 0.25f, 0.001f));
+  assert(close_to(position_m[0], 0.0f, 0.001f));
+  assert(close_to(position_m[1], 0.0f, 0.001f));
   assert(close_to(position_m[2], -1.0f, 0.001f));
 
   PoseFusion_Init(&fusion, accel_g, mag_uT, true);
@@ -76,6 +76,16 @@ int main(void)
   }
   assert(fusion.position_m[0] > 0.05f);
   assert(!PoseFusion_IsStationary(&fusion));
+
+  PoseFusion_Init(&fusion, accel_g, mag_uT, true);
+  const float left_accel_g[3] = {0.0f, 0.1f, 1.0f};
+  for (int sample = 0; sample < 200; sample++)
+  {
+    PoseFusion_Update(&fusion, left_accel_g, zero_gyro, zero_mag, false, 0.005f);
+  }
+  assert(close_to(fusion.position_m[1], 0.0f, 0.0001f));
+  PoseFusion_GetOpenVrPose(&fusion, quaternion, position_m);
+  assert(close_to(position_m[0], 0.0f, 0.0001f));
 
   const float up_y[3] = {0.0f, 1.0f, 0.0f};
   const float mag_y[3] = {0.0f, 25.0f, 0.0f};
@@ -105,13 +115,21 @@ int main(void)
 
   PoseFusion_Init(&fusion, accel_g, mag_uT, true);
   const float residual_yaw_dps[3] = {0.0f, 0.0f, 0.2f};
-  for (int sample = 0; sample < 4000; sample++)
+  for (int sample = 0; sample < 400; sample++)
   {
     PoseFusion_Update(&fusion, accel_g, residual_yaw_dps, zero_mag, false,
                       0.005f);
   }
   PoseFusion_GetOpenVrPose(&fusion, quaternion, position_m);
   assert(fusion.residual_gyro_bias_dps[2] > 0.195f);
+  assert(fabsf(quaternion[2]) < 0.001f);
+
+  for (int sample = 400; sample < 4000; sample++)
+  {
+    PoseFusion_Update(&fusion, accel_g, residual_yaw_dps, zero_mag, false,
+                      0.005f);
+  }
+  PoseFusion_GetOpenVrPose(&fusion, quaternion, position_m);
   assert(fabsf(quaternion[2]) < 0.02f);
 
   const float moving_yaw_dps[3] = {0.0f, 0.0f, 20.2f};

@@ -16,9 +16,8 @@ architecture remains intact.
 Current status: x64 Release builds with MSVC v142 with 0 errors and 0 warnings.
 The generated DLL exports `HmdDriverFactory`. SteamVR loads active HMD
 `jjkvr.zero`, starts the HID reader, adds right-hand controller `jjkvr.mouse`,
-loads its compositor binding, creates distortion surfaces, and reaches
-compositor `Startup Complete` without error 302. Visible cursor direction and
-click confirmation are the remaining interactive checks.
+and loads its compositor binding. The current driver build and resource JSON
+pass local checks; headset and Google Earth interaction remain hardware checks.
 
 ## Fixed hardware contract
 
@@ -44,12 +43,13 @@ click confirmation are the remaining interactive checks.
 ## Deliberate JJKVR changes
 
 - Runtime name and resources use `jjkvr`; the DLL is `driver_jjkvr.dll`.
-- A separate `jjkvr.mouse` tracked device supplies SteamVR's native visible
-  laser cursor and a static right-hand model without changing the HMD pose.
-- Mouse position inside the 2880x1440 headset display aims the cursor;
-  left-click is VR select, right-click is VR right-click, and middle-click
-  toggles dashboard. On the main monitor, the VR pose is invalid and its
-  buttons are released.
+- A separate `jjkvr.mouse` tracked device supplies SteamVR's native laser and
+  the installed Quest 2 right-controller render model, avoiding the generic
+  Xbox-style model without bundling a custom mesh.
+- The cursor position on whichever monitor contains it aims the pointer. The
+  virtual controller stays right/down/forward of the HMD so it remains visible.
+  Left-click is trigger/select, right-click is grip, middle-click is system,
+  and mouse side buttons provide menu and trackpad/joystick click compatibility.
 - `R` retains Relativty's orientation recenter behavior.
 - Relativty's 3-element position normalization loop no longer writes a fourth
   element, and float normalization limits no longer truncate to integers.
@@ -57,8 +57,7 @@ click confirmation are the remaining interactive checks.
 The desktop **Display VR View** remains a mirror. The Windows arrow is not drawn
 inside the headset; the visible VR cursor is SteamVR's laser/reticle from
 `jjkvr.mouse`. The `jjkvr_mouse` settings provide horizontal/vertical
-pointer-range tuning without modifying code. Mouse ownership uses the
-`jjkvr_extendedDisplay` window rectangle directly.
+pointer-range tuning without modifying code.
 
 ## Build
 
@@ -93,16 +92,14 @@ until JJKVR passes.
 2. Start SteamVR and confirm the active HMD serial begins with `jjkvr.`.
 3. Confirm the compositor reaches `Startup Complete` without error 302.
 4. Remain still through startup, then verify yaw, pitch, and roll signs.
-5. Verify short forward/left/up inertial movements in VR; expect drift.
+5. Verify short forward/back movement; lateral and vertical position stay zero.
 6. With the default-enabled TF-Luna fusion rigidly mounted, verify it only
    corrects forward/back motion against a fixed target and does not change
    rotation.
-7. On the main monitor, press left, right, and middle mouse over a harmless
-   desktop area; confirm no VR laser, click, or dashboard action appears.
-8. Move the cursor right onto the headset display, middle-click to open the
-   dashboard, aim the visible VR cursor, and left-click a dashboard item.
-9. Right-click a target that supports a secondary click.
-10. Move the cursor back to the main monitor and confirm the VR laser disappears.
+7. Move the cursor on either monitor and confirm the visible pointer follows it.
+8. Middle-click to open the dashboard, then left-click a dashboard item.
+9. In Google Earth VR, confirm the right controller is visible and left-click
+   selects; use the mouse side buttons only when the app requests menu/pad input.
 11. Press `R` and confirm the current orientation becomes the forward reference.
 
 Do not start Driver4VR or the old Relativty Python tracker for this test.
