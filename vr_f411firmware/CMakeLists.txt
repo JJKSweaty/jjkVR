@@ -46,6 +46,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/icm20948.c
     Core/Src/pose_fusion.c
+    Core/Src/tfluna_uart.c
 )
 
 # Add include paths

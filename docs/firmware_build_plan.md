@@ -15,7 +15,8 @@ been replaced by the live IMU pose implementation.
   movement, with stationary zero-velocity updates.
 - 64-byte HID pose protocol v2 sent at up to 100 Hz.
 - TF-Luna forward correction enabled by default for a rigid body-`+X` mount;
-  builds without the sensor can disable it at compile time.
+  its receive-only 115200-baud UART stream uses PA3 while the IMU stays alone
+  on I2C; builds without the sensor can disable it at compile time.
 
 This is a CubeMX/HAL C project. FastIMU was not imported: its ICM-20948 driver
 depends on Arduino C++, and it still needs a separate fusion implementation.
@@ -45,7 +46,8 @@ USB is vendor HID, VID:PID `0483:572B`, report ID `1`, 64 input bytes:
 | 17-28 | float32 position `(x,y,z)` metres, OpenVR coordinates |
 | 29 | bit 0 position valid; bit 1 TF-Luna correction accepted |
 | 30 | version `2` |
-| 31-63 | zero padding |
+| 31 | sensor status (`2` init, `3` calibration, `4` first read, `5` streaming, `6` IMU fault, `7` LiDAR fault, `8` TF-Luna-only test) |
+| 32-63 | zero padding |
 
 The quaternion prefix remains compatible with the previous driver packet.
 Firmware and the checked-in JJKVR driver must change together if these offsets
@@ -55,9 +57,8 @@ change.
 
 1. Select the firmware `Debug` CMake preset, build, and flash
    `vr_f411firmware/build/Debug/vr_f411firmware.elf`.
-2. Keep the final-mounted headset still and level, body `+Z` up, until the
-   startup LED changes from blue to green. Red means the ICM/AK device ID,
-   configuration, calibration, or a later I2C read failed.
+2. Keep the final-mounted headset still and level, body `+Z` up. Solid blue is
+   TF-Luna only, green is IMU only, cyan is both, and red is a sensor fault.
 3. Confirm Windows lists vendor HID `VID_0483&PID_572B`; no COM port is expected.
 4. Build/install the driver using
    [steamvr_driver_build_plan.md](steamvr_driver_build_plan.md), then verify all

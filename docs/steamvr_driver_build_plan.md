@@ -31,7 +31,8 @@ pass local checks; headset and Google Earth interaction remain hardware checks.
   | 17-28 | little-endian float32 position `(x,y,z)` in metres |
   | 29 | flags: `0x01` position valid, `0x02` TF-Luna correction accepted |
   | 30 | protocol version `2` |
-  | 31-63 | reserved, currently zero |
+  | 31 | sensor diagnostic status; logged when it changes |
+  | 32-63 | reserved, currently zero |
 
   The driver consumes v2 HID position only when `startTrackingServer` is
   false. Legacy ID-1 quaternion reports remain orientation-compatible.

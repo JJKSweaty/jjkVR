@@ -41,6 +41,7 @@ namespace {
 	constexpr int kPositionOffset = 17;
 	constexpr int kFlagsOffset = 29;
 	constexpr int kVersionOffset = 30;
+	constexpr int kStatusOffset = 31;
 	constexpr uint8_t kPositionValid = 0x01;
 	constexpr uint8_t kPoseProtocolVersion = 2;
 }
@@ -180,10 +181,17 @@ void JJKVR::HMDDriver::retrieve_device_quaternion_packet_threaded() {
 	uint8_t packet_buffer[kHidReportSize];
 	int16_t quaternion_packet[4];
 	int result;
+	uint8_t lastSensorStatus = 0xff;
 	JJKVR::ServerDriver::Log("Thread1: successfully started\n");
 	while (this->retrieve_quaternion_isOn) {
 		result = hid_read(this->handle, packet_buffer, kHidReportSize); //Result should be greater than 0.
 		if (result > 0) {
+			if (result == kHidReportSize && packet_buffer[0] == 1 &&
+				packet_buffer[kVersionOffset] == kPoseProtocolVersion &&
+				packet_buffer[kStatusOffset] != lastSensorStatus) {
+				lastSensorStatus = packet_buffer[kStatusOffset];
+				DriverLog("USB sensor status: %u\n", static_cast<unsigned>(lastSensorStatus));
+			}
 			if (m_bIMUpktIsDMP) {
 				if (result < 15 || packet_buffer[0] != 1) {
 					continue;
