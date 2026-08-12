@@ -247,19 +247,10 @@ void JJKVR::HMDDriver::retrieve_device_quaternion_packet_threaded() {
 				if (!this->start_tracking_server &&
 					packet_buffer[kVersionOffset] == kPoseProtocolVersion &&
 					(packet_buffer[kFlagsOffset] & kPositionValid) != 0) {
-					float received_position[3];
-					std::memcpy(received_position, packet_buffer + kPositionOffset, sizeof(received_position));
-					if (std::isfinite(received_position[0]) &&
-						std::isfinite(received_position[1]) &&
-						std::isfinite(received_position[2]) &&
-						std::fabs(received_position[0]) <= 10.0f &&
-						std::fabs(received_position[1]) <= 10.0f &&
-						std::fabs(received_position[2]) <= 10.0f) {
-						for (int axis = 0; axis < 3; axis++) {
-							this->vector_xyz[axis] = received_position[axis];
-						}
+						this->vector_xyz[0] = 0.0f;
+						this->vector_xyz[1] = 0.0f;
+						this->vector_xyz[2] = 0.0f;
 						this->new_vector_avaiable = true;
-					}
 				}
 				// ponytail: keep the legacy atomic handoff; add a snapshot lock if split frames become visible.
 				this->new_quaternion_avaiable = true;
@@ -328,10 +319,9 @@ void JJKVR::HMDDriver::retrieve_client_vector_packet_threaded() {
 
 			Normalize(coordinate_normalized, coordinate, normalize_max, normalize_min, this->upperBound, this->lowerBound, scales_coordinate_meter, offset_coordinate);
 
-			this->vector_xyz[0] = coordinate_normalized[1];
-			/* Keep the sideways axis fixed so small tracker bias cannot show up as right/left drift. */
+			this->vector_xyz[0] = 0.0f;
 			this->vector_xyz[1] = 0.0f;
-			this->vector_xyz[2] = coordinate_normalized[0];
+			this->vector_xyz[2] = 0.0f;
 			this->new_vector_avaiable = true;
 		}
 	}

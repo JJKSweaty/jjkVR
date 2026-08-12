@@ -56,6 +56,9 @@ first fused orientation and position as the origin. Calibration is RAM-only.
 After the headset is stationary for about 150 ms, the fusion code quickly learns
 only residual gyro rates below 0.25 degrees per second; faster motion is never
 used for bias learning.
+The IMU is not used to synthesize absolute translation anymore; accelerometer
+readings only help stabilize orientation. Forward position comes from TF-Luna,
+while lateral `X` and `Y` stay fixed at zero.
 The magnetometer trim constants near the top of `Core/Src/icm20948.c` must be
 measured with the final display electronics installed.
 
@@ -79,17 +82,17 @@ After the IMU declares the headset stationary, firmware averages eight valid
 range readings (about 0.4 seconds) to establish the startup baseline. Movement
 before all eight readings are collected restarts that average.
 
-The IMU remains the fast predictor. Each accepted 20 Hz LiDAR reading keeps 90%
-of the predicted forward position and applies 10% of the absolute range error;
-`LIDAR_CORRECTION_WEIGHT` is the mounted-hardware tuning knob. Corrections stay
-active at rest so accumulated forward drift converges back to the measured
-position. They never change orientation or the other two position axes.
+Each accepted 20 Hz LiDAR reading directly sets the forward distance relative
+to the startup baseline; there is no accelerometer-based velocity or position
+integration in this build. The IMU keeps the quaternion stable, and the LiDAR
+defines the only translation axis. Corrections never change orientation or the
+other two position axes.
 
 A 9-axis IMU has nine sensor channels, not nine pose degrees of freedom.
-Translation is intentionally limited to body `+X`: the IMU predicts forward
-motion and the one TF-Luna beam corrects it. Lateral and vertical position stay
-zero instead of exposing unobservable drift. Stable room-scale 6-DoF still
-needs an external positional reference.
+Translation is intentionally limited to body `+X`: the TF-Luna owns forward
+motion and the IMU owns orientation. Lateral and vertical position stay zero
+instead of exposing unobservable drift. Stable room-scale 6-DoF still needs an
+external positional reference.
 
 `ENABLE_IMU_DEMO_POSITION` defaults to `1` because this build is intended to
 exercise that requested movement path. Set it to `0` to keep SteamVR

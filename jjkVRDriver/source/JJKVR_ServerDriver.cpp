@@ -23,6 +23,9 @@
 #include <cmath>
 #include <cstdint>
 #include <Windows.h>
+#include <Xinput.h>
+
+#pragma comment(lib, "Xinput9_1_0.lib")
 
 namespace {
 	vr::HmdQuaternion_t multiplyQuaternion(const vr::HmdQuaternion_t& left,
@@ -65,6 +68,21 @@ namespace {
 	constexpr Vector3 identityResult = rotateVector(identity, { 0.25, -0.20, -0.45 });
 	static_assert(identityResult.x == 0.25 && identityResult.y == -0.20 &&
 		identityResult.z == -0.45);
+
+	float applyThumbDeadzone(SHORT value, SHORT deadzone)
+	{
+		if (value > deadzone)
+		{
+			return static_cast<float>(value - deadzone) /
+				static_cast<float>(32767 - deadzone);
+		}
+		if (value < -deadzone)
+		{
+			return static_cast<float>(value + deadzone) /
+				static_cast<float>(32768 - deadzone);
+		}
+		return 0.0f;
+	}
 }
 
 class JJKVR::MouseController : public JJKVRDevice<true> {
@@ -76,6 +94,8 @@ public:
 		m_sBindPath = "{jjkvr}/input/jjkvr_mouse_profile.json";
 		horizontalDegrees = vr::VRSettings()->GetFloat(mouseSection, "horizontalDegrees");
 		verticalDegrees = vr::VRSettings()->GetFloat(mouseSection, "verticalDegrees");
+		virtualCursorX = 0.5;
+		virtualCursorY = 0.5;
 	}
 
 	vr::EVRInitError Activate(uint32_t unObjectId) override {
@@ -162,37 +182,89 @@ public:
 
 		const vr::DriverPose_t hmdPose = hmd->GetPose();
 		m_Pose = hmdPose;
+		const bool trackingValid = hmdPose.poseIsValid && hmdPose.deviceIsConnected;
+		const DWORD nowMs = GetTickCount();
+		if (lastFrameMs == 0U) {
+			lastFrameMs = nowMs;
+		}
+		const float dt = static_cast<float>(nowMs - lastFrameMs) / 1000.0f;
+		lastFrameMs = nowMs;
+
+		XINPUT_STATE gamepadState = {};
+		const bool gamepadConnected = XInputGetState(0U, &gamepadState) == ERROR_SUCCESS;
 
 		POINT cursor = {};
 		MONITORINFO monitorInfo = { sizeof(MONITORINFO) };
 		const bool cursorAvailable = GetPhysicalCursorPos(&cursor) &&
 			GetMonitorInfo(MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST), &monitorInfo);
-		const bool trackingValid = hmdPose.poseIsValid && hmdPose.deviceIsConnected;
 		double normalizedX = 0.5;
 		double normalizedY = 0.5;
-		if (cursorAvailable) {
+		if (gamepadConnected) {
+			if (!virtualCursorLocked) {
+				if (cursorAvailable) {
+					const LONG width = monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left;
+					const LONG height = monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top;
+					normalizedX = static_cast<double>(cursor.x - monitorInfo.rcMonitor.left) /
+						(width > 1 ? width - 1 : 1);
+					normalizedY = static_cast<double>(cursor.y - monitorInfo.rcMonitor.top) /
+						(height > 1 ? height - 1 : 1);
+				}
+				virtualCursorX = normalizedX;
+				virtualCursorY = normalizedY;
+				virtualCursorLocked = true;
+			}
+
+			const float stickX = applyThumbDeadzone(gamepadState.Gamepad.sThumbRX,
+				XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+			const float stickY = applyThumbDeadzone(gamepadState.Gamepad.sThumbRY,
+				XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+			virtualCursorX = std::fmin(std::fmax(virtualCursorX + stickX * dt * 1.35, 0.0), 1.0);
+			virtualCursorY = std::fmin(std::fmax(virtualCursorY - stickY * dt * 1.35, 0.0), 1.0);
+			normalizedX = virtualCursorX;
+			normalizedY = virtualCursorY;
+		}
+		else if (cursorAvailable) {
 			const LONG width = monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left;
 			const LONG height = monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top;
 			normalizedX = static_cast<double>(cursor.x - monitorInfo.rcMonitor.left) /
 				(width > 1 ? width - 1 : 1);
 			normalizedY = static_cast<double>(cursor.y - monitorInfo.rcMonitor.top) /
 				(height > 1 ? height - 1 : 1);
+			virtualCursorX = normalizedX;
+			virtualCursorY = normalizedY;
+			virtualCursorLocked = false;
+			const double yawDegrees = -(normalizedX - 0.5) * horizontalDegrees;
+			const double pitchDegrees = -(normalizedY - 0.5) * verticalDegrees;
+			m_Pose.qRotation = multiplyQuaternion(
+				hmdPose.qRotation, mouseAimQuaternion(yawDegrees, pitchDegrees));
+		}
+		else {
+			virtualCursorLocked = false;
+		}
+
+		if (gamepadConnected) {
 			const double yawDegrees = -(normalizedX - 0.5) * horizontalDegrees;
 			const double pitchDegrees = -(normalizedY - 0.5) * verticalDegrees;
 			m_Pose.qRotation = multiplyQuaternion(
 				hmdPose.qRotation, mouseAimQuaternion(yawDegrees, pitchDegrees));
 		}
 
-		const Vector3 handOffset = rotateVector(hmdPose.qRotation, { 0.25, -0.20, -0.45 });
-		m_Pose.vecPosition[0] += handOffset.x;
-		m_Pose.vecPosition[1] += handOffset.y;
-		m_Pose.vecPosition[2] += handOffset.z;
+		m_Pose.vecPosition[0] = 0.0;
+		m_Pose.vecPosition[1] = 0.0;
+		m_Pose.vecPosition[2] = 0.0;
+		m_Pose.vecVelocity[0] = 0.0;
+		m_Pose.vecVelocity[1] = 0.0;
+		m_Pose.vecVelocity[2] = 0.0;
+		m_Pose.vecAcceleration[0] = 0.0;
+		m_Pose.vecAcceleration[1] = 0.0;
+		m_Pose.vecAcceleration[2] = 0.0;
 		m_Pose.poseIsValid = trackingValid;
 		vr::VRServerDriverHost()->TrackedDevicePoseUpdated(
 			m_unObjectId, m_Pose, sizeof(vr::DriverPose_t));
 
-		const bool leftPressed = trackingValid &&
-			(GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+		const bool leftPressed = trackingValid && (gamepadConnected ?
+			((gamepadState.Gamepad.wButtons & XINPUT_GAMEPAD_A) != 0) :
+			((GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0));
 		if (trigger != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateBooleanComponent(trigger, leftPressed, 0.0);
 		}
@@ -203,8 +275,9 @@ public:
 			vr::VRDriverInput()->UpdateScalarComponent(
 				triggerValue, leftPressed ? 1.0f : 0.0f, 0.0);
 		}
-		const bool rightPressed = trackingValid &&
-			(GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
+		const bool rightPressed = trackingValid && (gamepadConnected ?
+			((gamepadState.Gamepad.wButtons & XINPUT_GAMEPAD_B) != 0) :
+			((GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0));
 		if (rightClick != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateBooleanComponent(
 				rightClick, rightPressed, 0.0);
@@ -218,19 +291,25 @@ public:
 		}
 		if (system != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateBooleanComponent(
-				system, trackingValid && (GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0, 0.0);
+				system, trackingValid && (gamepadConnected ?
+				((gamepadState.Gamepad.wButtons & XINPUT_GAMEPAD_START) != 0) :
+				((GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0)), 0.0);
 		}
 		if (applicationMenu != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateBooleanComponent(applicationMenu,
-				trackingValid && (GetAsyncKeyState(VK_XBUTTON1) & 0x8000) != 0, 0.0);
+				trackingValid && (gamepadConnected ?
+				((gamepadState.Gamepad.wButtons & XINPUT_GAMEPAD_BACK) != 0) :
+				((GetAsyncKeyState(VK_XBUTTON1) & 0x8000) != 0)), 0.0);
 		}
 		if (trackpadClick != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateBooleanComponent(trackpadClick,
-				trackingValid && (GetAsyncKeyState(VK_XBUTTON2) & 0x8000) != 0, 0.0);
+				trackingValid && (gamepadConnected ?
+				((gamepadState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB) != 0) :
+				((GetAsyncKeyState(VK_XBUTTON2) & 0x8000) != 0)), 0.0);
 		}
 		if (trackpadTouch != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateBooleanComponent(
-				trackpadTouch, trackingValid && cursorAvailable, 0.0);
+				trackpadTouch, trackingValid && (cursorAvailable || gamepadConnected), 0.0);
 		}
 		if (trackpadX != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateScalarComponent(
@@ -240,14 +319,15 @@ public:
 			vr::VRDriverInput()->UpdateScalarComponent(
 				trackpadY, static_cast<float>(1.0 - normalizedY * 2.0), 0.0);
 		}
-		const bool stickPressed = trackingValid &&
-			(GetAsyncKeyState(VK_XBUTTON2) & 0x8000) != 0;
+		const bool stickPressed = trackingValid && (gamepadConnected ?
+			((gamepadState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB) != 0) :
+			((GetAsyncKeyState(VK_XBUTTON2) & 0x8000) != 0));
 		if (joystickClick != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateBooleanComponent(joystickClick, stickPressed, 0.0);
 		}
 		if (joystickTouch != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateBooleanComponent(
-				joystickTouch, trackingValid && cursorAvailable, 0.0);
+				joystickTouch, trackingValid && (cursorAvailable || gamepadConnected), 0.0);
 		}
 		if (joystickX != vr::k_ulInvalidInputComponentHandle) {
 			vr::VRDriverInput()->UpdateScalarComponent(
@@ -263,6 +343,10 @@ private:
 	HMDDriver* hmd;
 	float horizontalDegrees;
 	float verticalDegrees;
+	double virtualCursorX;
+	double virtualCursorY;
+	bool virtualCursorLocked = false;
+	DWORD lastFrameMs = 0U;
 	vr::VRInputComponentHandle_t trigger = vr::k_ulInvalidInputComponentHandle;
 	vr::VRInputComponentHandle_t triggerTouch = vr::k_ulInvalidInputComponentHandle;
 	vr::VRInputComponentHandle_t triggerValue = vr::k_ulInvalidInputComponentHandle;

@@ -290,9 +290,7 @@ static void send_pose_report(bool lidar_fused)
 #if ENABLE_LIDAR_FORWARD_FUSION
 static bool update_lidar_forward(uint16_t distance_cm, uint16_t amplitude)
 {
-  float forward_cosine;
   float lidar_forward_m;
-  float correction_error_m;
 
   if (distance_cm < TFLUNA_MIN_CM || distance_cm > TFLUNA_MAX_CM ||
       amplitude < TFLUNA_MIN_AMPLITUDE || amplitude == 0xFFFFU)
@@ -308,15 +306,14 @@ static bool update_lidar_forward(uint16_t distance_cm, uint16_t amplitude)
     return false;
   }
 
-  forward_cosine = PoseFusion_ForwardCosine(&pose_fusion);
-  if (forward_cosine < LIDAR_MIN_FORWARD_COSINE)
+  if (PoseFusion_ForwardCosine(&pose_fusion) < LIDAR_MIN_FORWARD_COSINE)
   {
     return false;
   }
 
   if (lidar_baseline_samples < LIDAR_BASELINE_SAMPLES)
   {
-    lidar_baseline_m += 0.01f * distance_cm * forward_cosine;
+    lidar_baseline_m += 0.01f * distance_cm;
     lidar_baseline_samples++;
     if (lidar_baseline_samples == LIDAR_BASELINE_SAMPLES)
     {
@@ -325,13 +322,8 @@ static bool update_lidar_forward(uint16_t distance_cm, uint16_t amplitude)
     return false;
   }
 
-  lidar_forward_m = lidar_baseline_m - 0.01f * distance_cm * forward_cosine;
-  correction_error_m = fminf(fmaxf(lidar_forward_m - pose_fusion.position_m[0],
-                                    -LIDAR_MAX_DISAGREEMENT_M),
-                              LIDAR_MAX_DISAGREEMENT_M);
-  PoseFusion_CorrectForward(&pose_fusion,
-                            pose_fusion.position_m[0] + correction_error_m,
-                            LIDAR_CORRECTION_WEIGHT);
+  lidar_forward_m = lidar_baseline_m - 0.01f * distance_cm;
+  pose_fusion.position_m[0] = lidar_forward_m;
   return true;
 }
 #endif

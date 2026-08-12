@@ -297,9 +297,7 @@ void PoseFusion_Update(PoseFusion *fusion, const float accel_g[3],
   float linear_accel_norm;
   float relative[4];
   float accel_world_g[3];
-  float linear_accel_mps2[3];
   float corrected_gyro_dps[3];
-  float damping;
 
   if ((dt_s <= 0.0f) || (dt_s > 0.05f))
   {
@@ -317,20 +315,15 @@ void PoseFusion_Update(PoseFusion *fusion, const float accel_g[3],
   relative_quaternion(fusion, relative);
   rotate_vector(relative, accel_g, accel_world_g);
   accel_world_g[2] -= 1.0f;
-  for (uint32_t axis = 0U; axis < 3U; axis++)
-  {
-    linear_accel_mps2[axis] = apply_deadband(accel_world_g[axis] * GRAVITY_MPS2,
-                                             LINEAR_ACCEL_DEADBAND_MPS2);
-  }
 
   gyro_norm = sqrtf(corrected_gyro_dps[0] * corrected_gyro_dps[0] +
                     corrected_gyro_dps[1] * corrected_gyro_dps[1] +
                     corrected_gyro_dps[2] * corrected_gyro_dps[2]);
-  linear_accel_norm = sqrtf(linear_accel_mps2[0] * linear_accel_mps2[0] +
-                            linear_accel_mps2[1] * linear_accel_mps2[1] +
-                            linear_accel_mps2[2] * linear_accel_mps2[2]);
+  linear_accel_norm = sqrtf(accel_world_g[0] * accel_world_g[0] +
+                            accel_world_g[1] * accel_world_g[1] +
+                            accel_world_g[2] * accel_world_g[2]);
   if ((gyro_norm < STATIONARY_GYRO_DPS) &&
-      (linear_accel_norm < STATIONARY_LINEAR_ACCEL_MPS2))
+      (fabsf(linear_accel_norm - 1.0f) < 0.20f))
   {
     if (fusion->stationary_samples < STATIONARY_SAMPLE_COUNT)
     {
@@ -357,19 +350,6 @@ void PoseFusion_Update(PoseFusion *fusion, const float accel_g[3],
     memset(fusion->velocity_mps, 0, sizeof(fusion->velocity_mps));
     return;
   }
-
-  damping = fmaxf(0.0f, 1.0f - VELOCITY_DAMPING_PER_SECOND * dt_s);
-  /* ponytail: one forward LiDAR observes body X only, so do not advertise drifting Y/Z. */
-  fusion->position_m[0] += fusion->velocity_mps[0] * dt_s +
-                           0.5f * linear_accel_mps2[0] * dt_s * dt_s;
-  fusion->velocity_mps[0] =
-      (fusion->velocity_mps[0] + linear_accel_mps2[0] * dt_s) * damping;
-  fusion->velocity_mps[0] = clampf(fusion->velocity_mps[0],
-                                   -MAX_DEMO_VELOCITY_MPS,
-                                   MAX_DEMO_VELOCITY_MPS);
-  fusion->position_m[0] = clampf(fusion->position_m[0],
-                                 -MAX_DEMO_POSITION_M,
-                                 MAX_DEMO_POSITION_M);
 }
 
 void PoseFusion_GetOpenVrPose(const PoseFusion *fusion, float quaternion[4],

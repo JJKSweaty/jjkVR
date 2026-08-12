@@ -31,6 +31,13 @@ optional TCP tracking server is enabled.
   present.
 - `R` recenters orientation while HID reports are arriving.
 
+If you do not want to use a mouse, the driver also reads an XInput gamepad for
+that same right-hand controller path. A PlayStation controller works if Windows
+is exposing it as XInput, which usually means Steam Input or DS4Windows is doing
+the translation. Right stick moves the cursor, `A` or cross selects, `B` or
+circle right-clicks, `Start` opens the SteamVR system action, and `Back` or
+share/menu opens application-menu.
+
 The driver reuses SteamVR's animated Quest 2 right-controller model instead of
 the Xbox-style generic model. Its Oculus Touch compatibility profile supplies
 the legacy trigger, grip, joystick, trackpad, and haptic paths expected by
